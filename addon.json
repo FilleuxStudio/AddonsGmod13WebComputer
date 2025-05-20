@@ -1,0 +1,12 @@
+{
+  "title": "Écran Web",
+  "type": "tool",
+  "tags": ["fun", "realism"],
+  "ignore": [
+    "*.psd",
+    "*.vcproj",
+    "*.svn*",
+    "*.git*",
+    "*.bat"
+  ]
+}
