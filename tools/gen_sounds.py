@@ -52,4 +52,10 @@ save("boot_cipher.wav", mix([(0.00, note(880, 0.08, .5, "square", decay=6)), (0.
 # Sandbox : petit jingle ludique
 save("boot_sandbox.wav", mix([(0.00, note(523.25, 0.25, .7, "soft", decay=6)), (0.15, note(659.25, 0.25, .7, "soft", decay=6)),
                               (0.30, note(523.25, 0.25, .7, "soft", decay=6)), (0.45, note(783.99, 0.9, .8, "soft", decay=3))], 1.5))
+# Retro : petite fanfare ascendante façon années 90 (originale)
+save("boot_retro.wav", mix([(0.00, note(329.63, 0.5, .7, "soft", decay=4)), (0.00, note(493.88, 0.5, .5, "soft", decay=4)),
+                            (0.35, note(392.00, 0.5, .7, "soft", decay=4)), (0.35, note(587.33, 0.5, .5, "soft", decay=4)),
+                            (0.70, note(523.25, 0.5, .7, "soft", decay=4)), (0.70, note(783.99, 0.5, .5, "soft", decay=4)),
+                            (1.05, note(659.25, 1.6, .8, "soft", decay=2)), (1.05, note(987.77, 1.6, .5, "soft", decay=2)),
+                            (1.05, note(523.25, 1.6, .5, "soft", decay=2))], 2.8))
 print("sons ok")

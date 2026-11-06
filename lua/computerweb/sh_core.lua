@@ -7,7 +7,7 @@
 ComputerWeb = ComputerWeb or {}
 local CW = ComputerWeb
 
-CW.Version = "2.0.0"
+CW.Version = "2.1.0"
 
 ---------------------------------------------------------------------------
 -- ConVars (répliquées : l'admin règle côté serveur, les clients suivent)

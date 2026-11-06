@@ -67,6 +67,8 @@ commands.help = function(st)
         "  open <fichier>      ouvrir dans le Bloc-notes  browse <...>   ouvrir le navigateur",
         "  play [station]      lancer la musique          stop           arrêter la musique",
         "  wallpaper <nom>     changer le fond d'écran    theme          infos système",
+        "  start <appli>       lancer une application     edit <fichier> ouvrir dans l'Éditeur",
+        "  calc <expression>   calculer                   accent r g b   couleur du système",
         "  date  whoami  hostname  uname  uptime  neofetch  ping <hôte>  exit",
     }
     for _, l in ipairs(lines) do st.out(l, l:sub(1, 1) ~= " " and "accent" or nil) end
@@ -170,6 +172,50 @@ commands.open = function(st, args)
     local target = resolve(st, name)
     if not target or not FS.Exists(target) then st.out("open: fichier introuvable", "err") return end
     if st.desktop then st.desktop:OpenApp("notepad", { path = target }) end
+end
+
+commands.edit = function(st, args)
+    if not args[1] then st.out("usage: edit <fichier.txt>", "err") return end
+    local name = args[1]
+    if not name:lower():match("%.txt$") then name = name .. ".txt" end
+    local target = resolve(st, name)
+    if not target then st.out("edit: nom invalide", "err") return end
+    if st.desktop then st.desktop:OpenApp(OS.Apps.editor and "editor" or "notepad", { path = FS.Exists(target) and target or nil }) end
+end
+
+commands.start = function(st, args)
+    local id = (args[1] or ""):lower()
+    if id == "" or not OS.Apps[id] then
+        local names = {}
+        for _, aid in ipairs(OS.AppOrder) do names[#names + 1] = aid end
+        st.out("usage: start <application>   (" .. table.concat(names, ", ") .. ")", id == "" and "accent" or "err")
+        return
+    end
+    if st.desktop then st.desktop:OpenApp(id) end
+end
+
+commands.calc = function(st, args, raw)
+    local expr = CW.Trim((raw:gsub("^%s*calc%s*", "")))
+    if expr == "" then st.out("usage: calc <expression>   ex. calc (3+4)*2", "err") return end
+    if not CW.Calc then st.out("calc: calculatrice indisponible", "err") return end
+    local v, err = CW.Calc.Eval(expr)
+    if v == nil then st.out("calc: " .. tostring(err), "err") return end
+    st.out("= " .. CW.Calc.Format(v), "ok")
+end
+
+commands.accent = function(st, args)
+    if args[1] == "reset" then
+        UI.SetAccent("")
+        RunConsoleCommand("cw_accent", "")
+        st.out("Couleur d'accent : celle du thème", "ok")
+        return
+    end
+    local r, g, b = tonumber(args[1]), tonumber(args[2]), tonumber(args[3])
+    if not (r and g and b) then st.out("usage: accent <r> <g> <b>  (0-255)   |   accent reset", "err") return end
+    local str = string.format("%d %d %d", math.Clamp(r, 0, 255), math.Clamp(g, 0, 255), math.Clamp(b, 0, 255))
+    UI.SetAccent(str)
+    RunConsoleCommand("cw_accent", str)
+    st.out("Couleur d'accent : " .. str, "ok")
 end
 
 commands.browse = function(st, args, raw)

@@ -65,6 +65,29 @@ ICONS["terminal"] = tile("#2B3442", "#0D1218",
 ICONS["settings"] = tile("#7D8AA3", "#3C4658", gear(64, 64, 34, 26, 8) +
     '<circle cx="64" cy="64" r="11" fill="#47526A"/>')
 
+
+# --- Micro-applications ------------------------------------------------------
+ICONS["editor"] = tile("#5B8CFF", "#2B3EC9",
+    '<rect x="32" y="24" width="64" height="80" rx="8" fill="#fff"/>'
+    '<path d="M44 44 H84 M44 58 H84 M44 72 H66" stroke="#2B3EC9" stroke-width="6" stroke-linecap="round"/>'
+    '<path d="M70 98 L100 54 a6 6 0 0 1 9 8 L82 104 z" fill="#FFC247" stroke="#fff" stroke-width="4" stroke-linejoin="round"/>')
+
+ICONS["calc"] = tile("#4B5568", "#1E2533",
+    '<rect x="30" y="22" width="68" height="84" rx="9" fill="#EDF1F8"/>'
+    '<rect x="38" y="30" width="52" height="20" rx="4" fill="#2BC4B8"/>'
+    + "".join(f'<rect x="{38 + c * 14}" y="{58 + r * 15}" width="10" height="10" rx="3" fill="{"#F08A1C" if c == 3 else "#8FA1C4"}"/>'
+              for r in range(3) for c in range(4)))
+
+ICONS["mines"] = tile("#FF6A5C", "#B3242E",
+    '<circle cx="64" cy="66" r="22" fill="#1B1F2A"/>'
+    + "".join(f'<path d="M64 66 L{64+math.cos(a)*34:.1f} {66+math.sin(a)*34:.1f}" stroke="#1B1F2A" stroke-width="7" stroke-linecap="round"/>' for a in [i*math.pi/4 for i in range(8)])
+    + '<circle cx="56" cy="58" r="6" fill="#fff" opacity="0.8"/>')
+
+ICONS["paint"] = tile("#FF9F43", "#E0357B",
+    '<path d="M64 28 C36 28 24 50 28 70 C32 90 52 102 68 100 C80 99 78 88 86 84 C98 78 104 70 100 52 C96 36 82 28 64 28 Z" fill="#fff"/>'
+    '<circle cx="48" cy="56" r="7" fill="#E0357B"/><circle cx="66" cy="44" r="7" fill="#FFC247"/>'
+    '<circle cx="86" cy="56" r="7" fill="#2BC4B8"/><circle cx="50" cy="78" r="7" fill="#5B8CFF"/>')
+
 # --- Dossier / fichier (couleur, sans tuile) --------------------------------
 ICONS["folder"] = (
     '<defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD76A"/><stop offset="1" stop-color="#F2A93B"/></linearGradient>'

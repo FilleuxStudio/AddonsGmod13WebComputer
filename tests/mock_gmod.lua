@@ -30,6 +30,7 @@ TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP, TEXT_ALIGN
 TOP, LEFT, RIGHT, BOTTOM, FILL = 1, 2, 3, 4, 5
 MOUSE_LEFT, MOUSE_RIGHT = 107, 108
 KEY_S, KEY_UP, KEY_DOWN, KEY_ENTER = 29, 88, 90, 64
+KEY_F, KEY_T = 9, 30
 FCVAR_ARCHIVE, FCVAR_REPLICATED, FCVAR_NOTIFY = 128, 8192, 256
 FFT_256 = 2
 GMOD_CHANNEL_STOPPED, GMOD_CHANNEL_PLAYING, GMOD_CHANNEL_PAUSED = 0, 1, 2
@@ -303,6 +304,7 @@ for _, name in ipairs(NOOP_METHODS) do
     if Panel[name] == nil then Panel[name] = function() end end
 end
 
+function Panel:GetCaretPos() return 0 end
 function Panel:IsValid() return not self.__removed end
 function Panel:Remove()
     self.__removed = true

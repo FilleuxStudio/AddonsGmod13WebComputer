@@ -68,6 +68,7 @@ function OS.Open(ent)
     UI.RefreshScale()
     local T = UI.SetTheme((ent and ent.CWTheme) or "nova")
     FS.Init()
+    if CW.Shortcuts then CW.Shortcuts.Load() end
 
     local sw, sh = ScrW(), ScrH()
     local w = math.floor(sw * 0.84)
@@ -222,6 +223,13 @@ function OS.Open(ent)
             local c = UI.T.c
             surface.SetDrawColor(c.bar.r, c.bar.g, c.bar.b, c.bar.a)
             surface.DrawRect(0, 0, pw, ph)
+            if UI.T.bevel then
+                surface.SetDrawColor(223, 223, 223, 255)
+                surface.DrawRect(0, 0, pw, 1)
+                surface.SetDrawColor(255, 255, 255, 255)
+                surface.DrawRect(0, 1, pw, 1)
+                return
+            end
             surface.SetDrawColor(c.accent.r, c.accent.g, c.accent.b, 120)
             surface.DrawRect(0, 0, pw, 1)
         end
@@ -235,6 +243,14 @@ function OS.Open(ent)
             local c = UI.T.c
             local hv = Lerp(math.min(FrameTime() * 14, 1), self.cwHover, (self:IsHovered() or root.MenuOpen) and 1 or 0)
             self.cwHover = hv
+            if UI.T.bevel then
+                local down = root.MenuOpen or self:IsDown()
+                UI.Bevel(S(3), S(5), pw - S(6), ph - S(9), not down, c.panel)
+                local o = down and 1 or 0
+                UI.DrawOrb(S(24) + o, ph / 2 + o, S(10), c.accent)
+                draw.SimpleText(UI.T.startLabel, "CW.Bold", S(44) + o, ph / 2 + o, c.barText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                return
+            end
             if hv > 0.01 then draw.RoundedBox(0, 0, 0, pw, ph, UI.Alpha(c.accent, math.floor(60 * hv + (root.MenuOpen and 40 or 0)))) end
             UI.DrawOrb(S(26), ph / 2, S(11), c.accent)
             draw.SimpleText(UI.T.startLabel, UI.T.mono and "CW.MonoBold" or "CW.Bold", S(48), ph / 2, c.barText,
@@ -248,6 +264,7 @@ function OS.Open(ent)
         tray:SetWide(S(110))
         tray.Paint = function(self, pw, ph)
             local c = UI.T.c
+            if UI.T.bevel then UI.Bevel(S(2), S(5), pw - S(8), ph - S(9), false, c.bar) end
             draw.SimpleText(clockText(), "CW.Bold", pw / 2, ph / 2 - S(8), c.barText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             draw.SimpleText(os.date("%d/%m/%Y"), "CW.Small", pw / 2, ph / 2 + S(10), UI.Alpha(c.barText, 190), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
@@ -331,6 +348,17 @@ function OS.Open(ent)
                         local c = UI.T.c
                         local active = root.Active == win and win:IsVisible()
                         self.cwHover = Lerp(math.min(FrameTime() * 14, 1), self.cwHover, self:IsHovered() and 1 or 0)
+                        if UI.T.bevel then
+                            UI.Bevel(0, 0, pw, ph, not active, active and c.panelHi or c.panel)
+                            local o = active and 1 or 0
+                            local tx2 = S(8) + o
+                            if win.cwIcon then
+                                UI.DrawIcon(win.cwIcon, tx2, (ph - S(20)) / 2 + o, S(20), S(20), UI.ColorIcons[win.cwIcon] and color_white or c.windowText)
+                                tx2 = tx2 + S(26)
+                            end
+                            draw.SimpleText(win.cwTitle or "", active and "CW.Bold" or "CW.Small", tx2, ph / 2 + o, c.barText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                            return
+                        end
                         local a = active and 90 or math.floor(40 * self.cwHover)
                         draw.RoundedBox(S(UI.T.radius), 0, 0, pw, ph, UI.Alpha(c.accent, a))
                         if active then
@@ -388,50 +416,112 @@ function OS.Open(ent)
     end
 
     ---------------------------------------------------------------------
-    -- Icônes du bureau (thèmes "bottom")
+    -- Icônes du bureau : applications (thèmes "bottom") + raccourcis du joueur
     ---------------------------------------------------------------------
-    if T.layout == "bottom" then
-        timer.Simple(0, function()
-            if not IsValid(Area) then return end
-            local x, y = S(18), S(14)
-            local cellW, cellH = S(96), S(98)
-            local ah = Area:GetTall()
+    root.IconPanels = {}
+
+    local function fitText(text, font, maxw)
+        surface.SetFont(font)
+        if surface.GetTextSize(text) <= maxw then return text end
+        while #text > 1 and surface.GetTextSize(text .. "...") > maxw do
+            text = text:sub(1, #text - 1)
+        end
+        return text .. "..."
+    end
+
+    function root:BuildDesktopIcons()
+        if not IsValid(Area) then return end
+        for _, p in ipairs(self.IconPanels) do if IsValid(p) then p:Remove() end end
+        self.IconPanels = {}
+        self.SelectedIcon = nil
+
+        local items = {}
+        if T.layout == "bottom" then
             for _, id in ipairs(OS.AppOrder) do
                 local def = OS.Apps[id]
                 if def.desktopIcon then
-                    if y + cellH > ah then x = x + cellW; y = S(14) end
-                    local b = vgui.Create("DButton", Area)
-                    b:SetText("")
-                    b:SetPos(x, y)
-                    b:SetSize(cellW - S(8), cellH - S(6))
-                    b.cwHover = 0
-                    b.Paint = function(self, pw, ph)
-                        self.cwHover = Lerp(math.min(FrameTime() * 14, 1), self.cwHover, self:IsHovered() and 1 or 0)
-                        local sel = (root.SelectedIcon == self)
-                        if sel or self.cwHover > 0.01 then
-                            draw.RoundedBox(S(8), 0, 0, pw, ph, Color(255, 255, 255, sel and 55 or math.floor(30 * self.cwHover)))
-                        end
-                        local isz = S(52)
-                        UI.DrawIcon(def.icon, (pw - isz) / 2, S(6), isz, isz)
-                        local font = UI.T.mono and "CW.MonoSmall" or "CW.Small"
-                        draw.SimpleText(def.name, font, pw / 2 + 1, S(66) + 1, Color(0, 0, 0, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-                        draw.SimpleText(def.name, font, pw / 2, S(66), color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-                    end
-                    b.DoClick = function(self)
-                        local now = SysTime()
-                        if root.SelectedIcon == self and self.cwLast and now - self.cwLast < 0.5 then
-                            root.SelectedIcon = nil
-                            root:OpenApp(id)
-                        else
-                            root.SelectedIcon = self
-                            self.cwLast = now
-                        end
-                    end
-                    y = y + cellH
+                    items[#items + 1] = { name = def.name, icon = def.icon, open = function() root:OpenApp(id) end }
                 end
             end
-        end)
+        end
+        for idx, e in ipairs((CW.Shortcuts and CW.Shortcuts.List) or {}) do
+            items[#items + 1] = {
+                name = e.label, icon = e.icon, shortcut = true, index = idx,
+                open = function() CW.Shortcuts.Open(root, e) end,
+            }
+        end
+
+        local x, y = S(18), S(14)
+        local cellW, cellH = S(96), S(98)
+        local ah = Area:GetTall()
+        for _, item in ipairs(items) do
+            if y + cellH > ah then x = x + cellW; y = S(14) end
+            local b = vgui.Create("DButton", Area)
+            b:SetText("")
+            b:SetPos(x, y)
+            b:SetSize(cellW - S(8), cellH - S(6))
+            b.cwHover = 0
+            local label = item.name
+            b.Paint = function(self, pw, ph)
+                self.cwHover = Lerp(math.min(FrameTime() * 14, 1), self.cwHover, self:IsHovered() and 1 or 0)
+                local sel = (root.SelectedIcon == self)
+                local bevel = UI.T.bevel
+                if not bevel and (sel or self.cwHover > 0.01) then
+                    draw.RoundedBox(S(8), 0, 0, pw, ph, Color(255, 255, 255, sel and 55 or math.floor(30 * self.cwHover)))
+                end
+                local isz = S(52)
+                UI.DrawIcon(item.icon, (pw - isz) / 2, S(6), isz, isz)
+                if item.shortcut then
+                    local ax, ay, as = math.floor((pw - isz) / 2) + S(2), S(6) + isz - S(15), S(13)
+                    surface.SetDrawColor(255, 255, 255, 255)
+                    surface.DrawRect(ax, ay, as, as)
+                    surface.SetDrawColor(0, 0, 0, 255)
+                    surface.DrawOutlinedRect(ax, ay, as, as, 1)
+                    surface.DrawLine(ax + 3, ay + as - 4, ax + as - 4, ay + 3)
+                    surface.DrawLine(ax + as - 8, ay + 3, ax + as - 4, ay + 3)
+                    surface.DrawLine(ax + as - 4, ay + 3, ax + as - 4, ay + 7)
+                end
+                local font = UI.T.mono and "CW.MonoSmall" or "CW.Small"
+                local txt = fitText(label, font, pw - S(4))
+                if bevel and sel then
+                    surface.SetFont(font)
+                    local tw2 = surface.GetTextSize(txt)
+                    surface.SetDrawColor(0, 0, 128, 255)
+                    surface.DrawRect(pw / 2 - tw2 / 2 - 2, S(65), tw2 + 4, S(17))
+                end
+                draw.SimpleText(txt, font, pw / 2 + 1, S(66) + 1, Color(0, 0, 0, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+                draw.SimpleText(txt, font, pw / 2, S(66), color_white, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+            end
+            b.DoClick = function(self)
+                local now = SysTime()
+                if root.SelectedIcon == self and self.cwLast and now - self.cwLast < 0.5 then
+                    root.SelectedIcon = nil
+                    item.open()
+                else
+                    root.SelectedIcon = self
+                    self.cwLast = now
+                end
+            end
+            b.DoRightClick = function(self)
+                root.SelectedIcon = self
+                local m = DermaMenu()
+                m:AddOption("Ouvrir", function() item.open() end):SetIcon("icon16/folder_go.png")
+                if item.shortcut then
+                    m:AddOption("Supprimer le raccourci", function()
+                        CW.Shortcuts.Remove(item.index)
+                        root:BuildDesktopIcons()
+                    end):SetIcon("icon16/delete.png")
+                end
+                m:Open()
+            end
+            self.IconPanels[#self.IconPanels + 1] = b
+            y = y + cellH
+        end
     end
+
+    timer.Simple(0, function()
+        if IsValid(root) then root:BuildDesktopIcons() end
+    end)
 
     ---------------------------------------------------------------------
     -- Menu démarrer / lanceur
@@ -453,6 +543,15 @@ function OS.Open(ent)
         menu:SetVisible(false)
         menu.Paint = function(self, pw, ph)
             local c = UI.T.c
+            if UI.T.bevel then
+                UI.Bevel(0, 0, pw, ph, true, c.menu)
+                UI.HGradient(S(4), S(4), pw - S(8), S(58), c.title, c.title2 or c.title)
+                UI.DrawOrb(S(34), S(32), S(14), c.accentText)
+                draw.SimpleText(UI.T.os, "CW.Title", S(58), S(24), c.titleText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                local nick2 = IsValid(LocalPlayer()) and LocalPlayer():Nick() or "Invité"
+                draw.SimpleText(nick2, "CW.Small", S(58), S(44), UI.Alpha(c.titleText, 200), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                return
+            end
             draw.RoundedBox(S(UI.T.radius + 4), -1, -1, pw + 2, ph + 2, Color(0, 0, 0, 90))
             draw.RoundedBox(S(UI.T.radius + 4), 0, 0, pw, ph, c.menu)
             -- en-tête
@@ -473,10 +572,21 @@ function OS.Open(ent)
             b.Paint = function(self, pw, ph)
                 local c = UI.T.c
                 self.cwHover = Lerp(math.min(FrameTime() * 14, 1), self.cwHover, self:IsHovered() and 1 or 0)
+                local isz = S(28)
+                if UI.T.bevel then
+                    local hot = self:IsHovered()
+                    local fg2 = hot and c.accentText or c.barText
+                    if hot then
+                        surface.SetDrawColor(c.accent.r, c.accent.g, c.accent.b, 255)
+                        surface.DrawRect(0, 0, pw, ph)
+                    end
+                    if icon then UI.DrawIcon(icon, S(10), (ph - isz) / 2, isz, isz, UI.ColorIcons[icon] and color_white or fg2) end
+                    draw.SimpleText(text, "CW.Body", S(10) + (icon and S(40) or 0), ph / 2, fg2, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    return
+                end
                 if self.cwHover > 0.01 then
                     draw.RoundedBox(S(UI.T.radius), 0, 0, pw, ph, UI.Alpha(danger and c.danger or c.accent, math.floor((danger and 200 or 90) * self.cwHover)))
                 end
-                local isz = S(28)
                 if icon then UI.DrawIcon(icon, S(10), (ph - isz) / 2, isz, isz) end
                 draw.SimpleText(text, UI.T.mono and "CW.Mono" or "CW.Body", S(10) + (icon and S(40) or 0), ph / 2,
                     c.barText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -527,6 +637,10 @@ function OS.Open(ent)
         end
         sub:AddSpacer()
         sub:AddOption("Par défaut du thème", function() RunConsoleCommand("cw_wallpaper", "") end)
+        m:AddOption("Nouveau raccourci...", function()
+            if CW.Shortcuts then CW.Shortcuts.OpenDialog(root) end
+        end):SetIcon("icon16/link_add.png")
+        m:AddOption("Couleur du système...", function() root:OpenApp("settings", { page = "color" }) end):SetIcon("icon16/color_wheel.png")
         m:AddOption("Paramètres", function() root:OpenApp("settings") end):SetIcon("icon16/wrench.png")
         m:AddSpacer()
         m:AddOption(T.shutdownLabel, function() root:Shutdown() end):SetIcon("icon16/door_out.png")
@@ -624,7 +738,7 @@ net.Receive("cw_os_open", function()
     OS.Open(ent)
 end)
 
--- Aperçu des thèmes sans entité (superadmin) : cw_desktop <nova|terra|cipher|sandbox>
+-- Aperçu des thèmes sans entité (superadmin) : cw_desktop <nova|terra|cipher|sandbox|retro>
 concommand.Add("cw_desktop", function(ply, _, args)
     if not IsValid(ply) or not ply:IsSuperAdmin() then return end
     local theme = args[1] or "nova"

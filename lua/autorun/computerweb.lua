@@ -1,5 +1,5 @@
 --[[----------------------------------------------------------------------------
-    ComputerWeb 2.0 - chargeur
+    ComputerWeb 2.1 - chargeur
     Auteur : FilleuxStudio (didifx60)
 ------------------------------------------------------------------------------]]
 
@@ -18,11 +18,16 @@ local SERVER_FILES = {
 local CLIENT_FILES = {
     "computerweb/cl_ui.lua",
     "computerweb/cl_fs.lua",
+    "computerweb/cl_shortcuts.lua",
     "computerweb/cl_os.lua",
     "computerweb/apps/cl_files.lua",
     "computerweb/apps/cl_notepad.lua",
     "computerweb/apps/cl_browser.lua",
     "computerweb/apps/cl_music.lua",
+    "computerweb/apps/cl_editor.lua",
+    "computerweb/apps/cl_calc.lua",
+    "computerweb/apps/cl_mines.lua",
+    "computerweb/apps/cl_paint.lua",
     "computerweb/apps/cl_terminal.lua",
     "computerweb/apps/cl_settings.lua",
     "computerweb/cl_screen_remote.lua",

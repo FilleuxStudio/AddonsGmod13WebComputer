@@ -125,6 +125,8 @@ end
 ---------------------------------------------------------------------------
 local PAGES = {
     { "look",  "Apparence"  },
+    { "color", "Couleurs"   },
+    { "desk",  "Bureau"     },
     { "web",   "Navigateur" },
     { "sound", "Son"        },
     { "diag",  "Diagnostic web" },
@@ -205,6 +207,140 @@ local function openSettings(desktop, args)
         for _, name in ipairs(UI.Wallpapers) do
             thumb(name, name:sub(1, 1):upper() .. name:sub(2))
         end
+    end
+
+    ---------------------------------------------------------------------
+    -- Couleur du système (accent) : appliquée en direct, enregistrée après 0.5 s
+    ---------------------------------------------------------------------
+    local PRESETS = {
+        { "Bleu", 46, 125, 240 }, { "Cyan", 0, 175, 215 }, { "Turquoise", 0, 150, 136 }, { "Vert", 60, 170, 100 },
+        { "Citron", 140, 190, 40 }, { "Jaune", 240, 190, 30 }, { "Orange", 238, 110, 50 }, { "Rouge", 214, 64, 64 },
+        { "Rose", 232, 80, 150 }, { "Violet", 130, 80, 210 }, { "Ardoise", 110, 120, 140 },
+    }
+
+    builders.color = function(p)
+        heading(p, "Couleur du système")
+        paragraph(p, "Change la couleur d'accent (boutons, barres de titre, sélection) de tous vos ordinateurs. Appliqué immédiatement.")
+
+        local dirty
+        p.Think = function(self)
+            if dirty and SysTime() - dirty > 0.5 then
+                dirty = nil
+                RunConsoleCommand("cw_accent", UI.AccentOverride or "")
+            end
+        end
+        local function setColor(str)
+            UI.SetAccent(str)
+            dirty = SysTime()
+        end
+
+        local grid = vgui.Create("DIconLayout", p)
+        grid:Dock(TOP)
+        grid:SetTall(S(120))
+        grid:SetSpaceX(S(10))
+        grid:SetSpaceY(S(10))
+        local function swatch(label, r, g, b)
+            local btn = vgui.Create("DButton", grid)
+            btn:SetText("")
+            btn:SetSize(S(100), S(50))
+            btn.Paint = function(self, w, h)
+                local c = UI.T.c
+                local cur = UI.GetAccent()
+                local active = (r == nil and cur == nil) or (cur and r and cur.r == r and cur.g == g and cur.b == b)
+                if UI.T.bevel then
+                    UI.Bevel(0, 0, w, h, not active, c.panel)
+                    if r then
+                        surface.SetDrawColor(r, g, b, 255)
+                        surface.DrawRect(S(6), S(6), S(24), h - S(12))
+                    end
+                    draw.SimpleText(label, "CW.Small", r and S(36) or w / 2, h / 2, c.windowText, r and TEXT_ALIGN_LEFT or TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    return
+                end
+                draw.RoundedBox(S(8), 0, 0, w, h, active and c.windowText or c.border)
+                draw.RoundedBox(S(7), 2, 2, w - 4, h - 4, r and Color(r, g, b) or c.panel)
+                local lum = r and (r * 0.299 + g * 0.587 + b * 0.114) or 0
+                draw.SimpleText(label, "CW.Small", w / 2, h / 2, (r and lum < 150) and color_white or ((r and Color(20, 20, 24)) or c.windowText),
+                    TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btn.DoClick = function()
+                setColor(r and string.format("%d %d %d", r, g, b) or "")
+            end
+        end
+        swatch("Thème (défaut)")
+        for _, pr in ipairs(PRESETS) do swatch(pr[1], pr[2], pr[3], pr[4]) end
+
+        paragraph(p, "Couleur personnalisée (rouge / vert / bleu) :")
+        local cur = UI.GetAccent() or UI.Base.c.accent
+        local rgb = { cur.r, cur.g, cur.b }
+        for i, name in ipairs({ "Rouge", "Vert", "Bleu" }) do
+            local row = vgui.Create("DPanel", p)
+            row:Dock(TOP)
+            row:SetTall(S(34))
+            row.Paint = function(_, w, h)
+                draw.SimpleText(name, "CW.Body", 0, h / 2, UI.T.c.windowText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tostring(rgb[i]), "CW.Bold", w, h / 2, UI.T.c.windowText, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            end
+            local sl = UI.Slider(row, rgb[i] / 255, function(v)
+                rgb[i] = math.floor(v * 255 + 0.5)
+                setColor(string.format("%d %d %d", rgb[1], rgb[2], rgb[3]))
+            end)
+            sl:Dock(FILL)
+            sl:DockMargin(S(70), 0, S(50), 0)
+        end
+    end
+
+    ---------------------------------------------------------------------
+    -- Bureau : raccourcis
+    ---------------------------------------------------------------------
+    builders.desk = function(p)
+        local SC = CW.Shortcuts
+        heading(p, "Raccourcis du bureau")
+        paragraph(p, "Ajoutez des raccourcis vers une application, un site web ou un fichier. Ils s'affichent sur le bureau (clic droit sur un raccourci pour le supprimer).")
+
+        local add = UI.Button(p, "Nouveau raccourci...", "newfile", function()
+            if SC then SC.OpenDialog(desktop) end
+        end, "accent")
+        add:Dock(TOP)
+        add:SetTall(S(38))
+        add:DockMargin(0, 0, 0, S(10))
+
+        local list = vgui.Create("DScrollPanel", p)
+        list:Dock(FILL)
+
+        local function build()
+            list:Clear()
+            local items = SC and SC.List or {}
+            if #items == 0 then
+                local l = UI.Label(list, "Aucun raccourci pour le moment.", "CW.Body", "dim")
+                l:Dock(TOP)
+                l:SetTall(S(30))
+            end
+            for i, e in ipairs(items) do
+                local row = vgui.Create("DPanel", list)
+                row:Dock(TOP)
+                row:SetTall(S(46))
+                row:DockMargin(0, 0, S(6), S(4))
+                row.Paint = function(_, w, h)
+                    local c = UI.T.c
+                    if UI.T.bevel then UI.Bevel(0, 0, w, h, true, c.panel)
+                    else draw.RoundedBox(S(UI.T.radius), 0, 0, w, h, c.panel) end
+                    UI.DrawIcon(e.icon, S(8), (h - S(30)) / 2, S(30), S(30), UI.ColorIcons[e.icon] and color_white or c.windowText)
+                    draw.SimpleText(e.label, "CW.Bold", S(48), h / 2 - S(8), c.windowText, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    local kind = (e.type == "app" and "Application : " or e.type == "url" and "Site : " or "Fichier : ") .. (e.app or e.url or e.path)
+                    draw.SimpleText(kind, "CW.Small", S(48), h / 2 + S(9), c.dim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                end
+                local del = UI.Button(row, nil, "trash", function()
+                    SC.Remove(i)
+                    if desktop.BuildDesktopIcons then desktop:BuildDesktopIcons() end
+                    build()
+                end, "danger")
+                del:Dock(RIGHT)
+                del:SetWide(S(40))
+                del:DockMargin(0, S(5), S(6), S(5))
+            end
+        end
+        build()
+        desktop.OnShortcutsChanged = function() if IsValid(list) then build() end end
     end
 
     ---------------------------------------------------------------------

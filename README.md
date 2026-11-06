@@ -4,25 +4,36 @@
 
 Des ordinateurs et des écrans que les joueurs peuvent **vraiment utiliser** : un mini-système avec fenêtres, navigateur web, fichiers, bloc-notes, radio et terminal. Compatible **DarkRP**, Sandbox et tout serveur GMod 13.
 
-> Version 2.0 — refonte complète du vieil addon `AddonsGmod13WebComputer`.
+> Version 2.1 — refonte complète du vieil addon `AddonsGmod13WebComputer`, maintenant avec 5 « systèmes » et 10 applications.
 
 ## Fonctionnalités
 
 | | |
 |---|---|
-| 🖥️ **4 thèmes** | **Nova** (barre des tâches), **Terra** (dock latéral), **Cipher** (mode hacker), **Sandbox** (ardoise) |
+| 🖥️ **5 thèmes** | **Nova** (barre des tâches), **Terra** (dock latéral), **Cipher** (mode hacker), **Sandbox** (ardoise), **Retro98** (relief biseauté années 90) |
+| 🎨 **Personnalisation** | Couleur d'accent au choix (en direct), fonds d'écran, raccourcis de bureau (application, site web ou fichier) avec icône à choisir |
 | 🌐 **Navigateur** | Tuiles d'accueil, DuckDuckGo / Bing / Google, SafeSearch, garde d'URL |
-| 📁 **Fichiers & Bloc-notes** | Dossiers et fichiers `.txt` enregistrés par joueur (côté client) |
+| 📁 **Fichiers, Bloc-notes, Éditeur** | Dossiers et fichiers `.txt` par joueur (côté client). L'**Éditeur** ajoute rechercher/remplacer, taille de police, police fixe, ligne/colonne, nombre de mots |
+| 🧮 **Calculatrice** | Évaluateur maison (aucun code exécuté) : `+ - * / ^ %`, parenthèses, `sqrt sin cos tan ln log abs round`, `pi`, `e` |
+| 🎮 **Démineur & Dessin** | Démineur 3 niveaux (premier clic sûr) ; Dessin avec 12 couleurs, gomme, annuler, enregistrement dans Documents |
 | 🎵 **Musique** | Radios (SomaFM), favoris, URL personnalisée |
-| ⌨️ **Terminal** | `help ls cd cat mkdir touch rm mv echo open browse play stop wallpaper theme neofetch ping…` |
+| ⌨️ **Terminal** | `help ls cd cat mkdir touch rm mv echo open edit browse play stop start calc accent wallpaper theme neofetch ping…` |
 | 📺 **Écrans 3D** | Page web sur le modèle, chargée seulement de près, volume selon la distance, `E` = télécommande |
 | ⚙️ **Paramètres** | Thème, fond d'écran, diagnostic du moteur web |
 
 ## Entités (menu `Q` → Entités → ComputerWeb)
 
-`computerWindows` (Nova) · `computerUbuntu` (Terra) · `computerKali` (Cipher) · `computerGarrysMod` (Sandbox) · `monitorMusic` · `monitorMusciTwo`
+`computerWindows` (Nova) · `computerUbuntu` (Terra) · `computerKali` (Cipher) · `computerGarrysMod` (Sandbox) · `computerRetro` (Retro98) · `monitorMusic` · `monitorMusciTwo`
 
 Appuyez sur **E** sur un ordinateur pour ouvrir le bureau.
+
+## Personnaliser son système
+
+- **Paramètres → Couleurs** : 11 teintes prédéfinies ou curseurs rouge/vert/bleu ; appliqué immédiatement. Équivalent terminal : `accent 46 125 240` / `accent reset`.
+- **Clic droit sur le bureau → Nouveau raccourci…** (ou **Paramètres → Bureau**) : choisissez application, site web ou fichier, un nom et une icône. Clic droit sur un raccourci pour le supprimer (40 maximum).
+- Les réglages sont enregistrés sur le PC du joueur (`garrysmod/data/computerweb/`). Les sites passent toujours par la garde d'URL du serveur.
+
+<p align="center"><img src="docs/retro98_preview.jpg" alt="Illustration du thème Retro98" width="70%"><br><em>Illustration du thème Retro98 (maquette, pas une capture du jeu).</em></p>
 
 ## Installation
 
@@ -65,7 +76,7 @@ lua/autorun/computerweb.lua   chargeur
 lua/computerweb/              config, noyau, UI, OS, apps/
 lua/entities/                 ordinateurs et écrans
 materials/ sound/             assets originaux
-tools/                        scripts de génération des assets
+tools/                        scripts de génération des assets (icônes, fonds, sons)
 tests/                        tests Lua (python3 tests/run_tests.py)
 ```
 

@@ -24,7 +24,7 @@ include("computerweb/config.lua")
 include("computerweb/sh_core.lua")
 local CW = ComputerWeb
 check(CW and CW.CheckURL, "sh_core chargé")
-eq(CW.Version, "2.0.0", "version")
+eq(CW.Version, "2.1.0", "version")
 
 ---------------------------------------------------------------------------
 -- Garde d'URL
@@ -131,14 +131,15 @@ hook.Remove("ComputerWeb_CanUse", "t")
 section("Client : chargement ui / fs / os / apps")
 include("computerweb/cl_ui.lua")
 include("computerweb/cl_fs.lua")
+include("computerweb/cl_shortcuts.lua")
 include("computerweb/cl_os.lua")
-for _, f in ipairs({ "files", "notepad", "browser", "music", "terminal", "settings" }) do
+for _, f in ipairs({ "files", "notepad", "browser", "music", "editor", "calc", "mines", "paint", "terminal", "settings" }) do
     include("computerweb/apps/cl_" .. f .. ".lua")
 end
 include("computerweb/cl_screen_remote.lua")
 local FS, UI, OS = CW.FS, CW.UI, CW.OS
 check(FS and UI and OS, "modules client chargés")
-check(#OS.AppOrder == 6, "6 applications enregistrées", #OS.AppOrder)
+check(#OS.AppOrder == 10, "10 applications enregistrées", #OS.AppOrder)
 
 section("FS : noms et chemins")
 eq(FS.SanitizeName("Résumé été.txt"), "Resume ete.txt", "accents retirés")
@@ -458,7 +459,7 @@ local function loadEnt(name, realm)
     return e
 end
 
-local computers = { computerWindows = "nova", computerUbuntu = "terra", computerKali = "cipher", computerGarrysMod = "sandbox" }
+local computers = { computerWindows = "nova", computerUbuntu = "terra", computerKali = "cipher", computerGarrysMod = "sandbox", computerRetro = "retro" }
 for class, theme in pairs(computers) do
     local e = loadEnt(class, "server")
     eq(e.CWTheme, theme, class .. " : thème " .. theme)
@@ -767,6 +768,285 @@ do
         noErrors(errs2, "télécommande : clics")
         check(#MOCK.netSent >= 1 and MOCK.netSent[1].name == "cw_screen_set", "bouton préréglage -> cw_screen_set envoyé")
     end
+end
+
+
+---------------------------------------------------------------------------
+-- Micro-applications (logique pure)
+---------------------------------------------------------------------------
+section("Terminal : nouvelles commandes")
+do
+    local r = OS.Open({ CWTheme = "retro", IsValid = function() return false end })
+    timer.Flush()
+    local out = {}
+    local st = { desktop = r, cwd = "", started = SysTime(), out = function(txt, kind) out[#out + 1] = tostring(txt) end }
+    local function run(line) out = {}; CW.Term.Run(st, line) return table.concat(out, "\n") end
+    check(run("calc (3+4)*2"):find("= 14", 1, true), "terminal : calc")
+    check(run("calc 1/0"):find("zéro"), "terminal : calc erreur")
+    check(run("calc os.exit()"):find("calc:"), "terminal : calc refuse du code")
+    run("start calc")
+    local found
+    for _, w in ipairs(r.Windows) do if w.cwApp == "calc" then found = true end end
+    check(found, "terminal : start calc ouvre la calculatrice")
+    check(run("start nimportequoi"):find("usage"), "terminal : start application inconnue")
+    run("accent 10 20 30"); eq(UI.T.c.accent.g, 20, "terminal : accent appliqué")
+    check(run("accent x"):find("usage"), "terminal : accent usage")
+    run("accent reset"); eq(UI.T.c.accent.b, 128, "terminal : accent reset")
+    run("echo salut > t.txt"); run("edit t.txt")
+    local ed
+    for _, w in ipairs(r.Windows) do if w.cwApp == "editor" then ed = w end end
+    check(ed ~= nil, "terminal : edit ouvre l'éditeur")
+    if ed then ed.cwDiscard = true; ed:CloseWindow() end
+    r:Shutdown()
+end
+
+section("Calculatrice : évaluateur d'expressions")
+do
+    local E = CW.Calc.Eval
+    local function ev(expr) local v, err = E(expr) return v, err end
+    eq(ev("1+2*3"), 7, "priorité * sur +")
+    eq(ev("(1+2)*3"), 9, "parenthèses")
+    eq(ev("-2^2"), -4, "moins unaire sous la puissance : -(2^2)")
+    eq(ev("2^3^2"), 512, "puissance associative à droite")
+    eq(ev("2^-1"), 0.5, "exposant négatif")
+    eq(ev("10/4"), 2.5, "division")
+    eq(ev("10%3"), 1, "modulo")
+    eq(ev("-7%3"), 2, "modulo positif")
+    eq(ev("sqrt(16)+abs(-3)"), 7, "fonctions")
+    eq(ev("round(2.5)"), 3, "round")
+    check(math.abs(ev("pi") - math.pi) < 1e-12, "constante pi")
+    check(math.abs(ev("sin(0)")) < 1e-12 and ev("cos(0)") == 1, "trigonométrie")
+    eq(ev("  4 * ( 2 + 3 ) "), 20, "espaces ignorés")
+    eq(ev("--3"), 3, "double moins")
+    local v, err = ev("1/0"); check(v == nil and err:find("zéro"), "division par zéro refusée", err)
+    v, err = ev("sqrt(-1)"); check(v == nil, "racine négative refusée")
+    v, err = ev("ln(0)"); check(v == nil, "ln(0) refusé")
+    v, err = ev("2+"); check(v == nil, "expression incomplète refusée", err)
+    v, err = ev("(2+3"); check(v == nil, "parenthèse manquante refusée", err)
+    v, err = ev("2 3"); check(v == nil, "deux nombres sans opérateur refusés", err)
+    v, err = ev("os.exit()"); check(v == nil, "appel de fonction Lua refusé", err)
+    v, err = ev("print(1)"); check(v == nil, "fonction inconnue refusée", err)
+    v, err = ev("1;2"); check(v == nil, "caractère interdit refusé", err)
+    v, err = ev("1,5"); check(v == nil, "virgule décimale refusée avec message", err)
+    v, err = ev(string.rep("(", 40) .. "1" .. string.rep(")", 40)); check(v == nil, "imbrication excessive refusée", err)
+    v, err = ev(string.rep("1+", 100) .. "1"); check(v == nil, "expression trop longue refusée", err)
+    v, err = ev("9^9^9"); check(v == nil, "dépassement refusé", err)
+    v, err = ev(""); check(v == nil, "vide refusé")
+    eq(CW.Calc.Format(7), "7", "format entier")
+    eq(CW.Calc.Format(2.5), "2.5", "format décimal")
+    eq(CW.Calc.Format(1 / 3), "0.3333333333", "format 10 chiffres")
+end
+
+section("Éditeur : fonctions pures")
+do
+    local Ed = CW.Editor
+    local t, n = Ed.ReplaceAll("a.b.a", "a", "XY"); eq(t, "XY.b.XY", "remplacer tout"); eq(n, 2, "nombre de remplacements")
+    t, n = Ed.ReplaceAll("100%", "%", "%%"); eq(t, "100%%", "'%' traité comme du texte brut")
+    t, n = Ed.ReplaceAll("abc", "", "x"); eq(n, 0, "recherche vide : rien")
+    t, n = Ed.ReplaceAll("aaa", "aa", "b"); eq(t, "ba", "non chevauchant")
+    eq(#Ed.FindAll("abcabc", "bc"), 2, "FindAll")
+    eq(Ed.FindAll("abcabc", "bc")[2], 5, "FindAll position")
+    local ln, col = Ed.LineCol("ab\ncde", 0); eq(ln, 1, "ligne début"); eq(col, 1, "col début")
+    ln, col = Ed.LineCol("ab\ncde", 5); eq(ln, 2, "ligne 2"); eq(col, 3, "col 3")
+    ln, col = Ed.LineCol("ab\ncde", 999); eq(ln, 2, "position hors limite bornée")
+    eq(Ed.WordCount("un deux\n trois  "), 3, "mots")
+    eq(Ed.LineOf("a\nb\nc", 5), 3, "LineOf")
+end
+
+section("Démineur : logique")
+do
+    local M = CW.Mines
+    local g = M.New(9, 9, 10)
+    local seq = 0
+    local function rnd(a, b) seq = seq + 1 return a + (seq * 7) % (b - a + 1) end
+    eq(M.Reveal(g, 5, 5, rnd), "ok", "premier clic sûr")
+    check(not g.cells[(5 - 1) * 9 + 5].mine, "case de départ sans mine")
+    local mines = 0
+    for _, c in ipairs(g.cells) do if c.mine then mines = mines + 1 end end
+    eq(mines, 10, "10 mines posées")
+    for _, nb in ipairs(M.Neighbours(g, 5, 5)) do check(not g.cells[(nb[2] - 1) * 9 + nb[1]].mine, "voisine sûre") break end
+    check(g.opened >= 1, "au moins une case ouverte")
+    -- drapeau
+    local fx, fy
+    for y = 1, 9 do for x = 1, 9 do if not g.cells[(y - 1) * 9 + x].open and not fx then fx, fy = x, y end end end
+    check(M.ToggleFlag(g, fx, fy), "pose drapeau"); eq(g.flags, 1, "compteur drapeaux")
+    check(M.Reveal(g, fx, fy) == nil, "case marquée non révélable")
+    check(M.ToggleFlag(g, fx, fy), "retire drapeau"); eq(g.flags, 0, "compteur remis à zéro")
+    -- défaite
+    local boom
+    for i, c in ipairs(g.cells) do if c.mine then boom = i break end end
+    local bx, by = (boom - 1) % 9 + 1, math.floor((boom - 1) / 9) + 1
+    eq(M.Reveal(g, bx, by), "boom", "mine -> boom")
+    check(g.over and not g.won, "partie perdue")
+    check(M.Reveal(g, 1, 1) == nil, "plus de coup après la fin")
+    -- victoire : on ouvre toutes les cases sans mine
+    local g2 = M.New(9, 9, 10)
+    seq = 3
+    M.Reveal(g2, 1, 1, rnd)
+    for y = 1, 9 do for x = 1, 9 do
+        if not g2.cells[(y - 1) * 9 + x].mine then M.Reveal(g2, x, y) end
+    end end
+    check(g2.over and g2.won, "partie gagnée en ouvrant toutes les cases sûres")
+    local g3 = M.New(3, 3, 99)
+    eq(g3.mines, 0, "grille 3x3 : au plus w*h-9 mines")
+end
+
+section("Dessin : sérialisation")
+do
+    local P = CW.Paint
+    local strokes = { { r = 255, g = 0, b = 10, size = 5, pts = { 0, 0, 500, 500, 1000, 1000 } }, { r = 1, g = 2, b = 3, size = 2, pts = { 10, 10 } } }
+    local text = P.Serialize(strokes)
+    local back = P.Parse(text)
+    eq(#back, 2, "2 traits relus (un point seul est valide)"); eq(back[1].r, 255, "couleur"); eq(back[1].pts[5], 1000, "points")
+    check(P.Parse("hello") == nil, "mauvais en-tête refusé")
+    back = P.Parse(P.Header .. "\n999 -5 300 500 0 0 99999 -50")
+    eq(back[1].r, 255, "couleur bornée"); eq(back[1].g, 0, "couleur bornée (négatif)")
+    eq(back[1].size, 30, "épaisseur bornée"); eq(back[1].pts[3], 1000, "coordonnée bornée"); eq(back[1].pts[4], 0, "coordonnée négative bornée")
+    local big = { P.Header }
+    for i = 1, 400 do big[#big + 1] = "0 0 0 2 1 1 2 2" end
+    eq(#P.Parse(table.concat(big, "\n")), P.MaxStrokes, "nombre de traits plafonné")
+    check(P.Parse(P.Header .. "\n1 2 3 4 5") ~= nil and #P.Parse(P.Header .. "\n1 2 3 4 5") == 0, "ligne malformée ignorée")
+end
+
+section("Raccourcis : validation, enregistrement, ouverture")
+do
+    local SC = CW.Shortcuts
+    SC.List = {}
+    check(SC.Add({ type = "app", app = "notepad", label = "Mon bloc" }), "raccourci application")
+    check(SC.Add({ type = "url", url = "fr.wikipedia.org", label = "Wiki" }), "raccourci URL (https ajouté)")
+    eq(SC.List[2].url, "https://fr.wikipedia.org", "https ajouté automatiquement")
+    local ok, err = SC.Add({ type = "url", url = "javascript:alert(1)" }); check(not ok, "javascript: refusé", err)
+    ok, err = SC.Add({ type = "url", url = "http://192.168.1.1/" }); check(not ok, "LAN refusé", err)
+    ok, err = SC.Add({ type = "url", url = "https://x.com/\nboo" }); check(not ok, "retour ligne refusé", err)
+    ok, err = SC.Add({ type = "app", app = "../../x" }); check(not ok, "id d'application invalide refusé", err)
+    ok, err = SC.Add({ type = "file", path = "" }); check(not ok, "fichier vide refusé", err)
+    ok, err = SC.Add({ type = "file", path = "Documents/note.txt", label = "Note" }); check(ok, "raccourci fichier", err)
+    ok, err = SC.Add({ type = "bidule" }); check(not ok, "type inconnu refusé", err)
+    ok, err = SC.Add("pas une table"); check(not ok, "entrée non table refusée")
+    eq(SC.List[1].icon, "notepad", "icône par défaut de l'application")
+    eq(SC.List[2].icon, "browser", "icône par défaut d'un site")
+    local e = SC.Sanitize({ type = "app", app = "calc", label = "  " .. string.rep("x", 60) .. "\t", icon = "evil" })
+    check(#e.label <= 24 and not e.label:find("%c"), "nom borné et nettoyé"); check(SC.IconSet[e.icon], "icône inconnue remplacée")
+    -- aller-retour disque
+    local before = #SC.List
+    SC.List = {}
+    SC.Load()
+    eq(#SC.List, before, "rechargement : même nombre de raccourcis")
+    eq(SC.List[3].path, "Documents/note.txt", "rechargement : chemin conservé")
+    -- fichier piégé
+    local parsed = SC.Parse("app\tsettings\tnotepad\tOK\nurl\tbrowser\tjavascript:alert(1)\tMal\nbidule\tx\ty\tz\nligne cassée")
+    eq(#parsed, 1, "Parse : seules les lignes valides sont gardées")
+    -- limite
+    SC.List = {}
+    for i = 1, SC.Max do SC.Add({ type = "app", app = "calc" }) end
+    ok, err = SC.Add({ type = "app", app = "calc" }); check(not ok, "plafond de raccourcis", err)
+    check(SC.Remove(1) and #SC.List == SC.Max - 1, "suppression")
+    check(not SC.Remove(999), "suppression hors limites")
+    SC.List = {}
+end
+
+section("Accent : couleur choisie par le joueur")
+do
+    UI.SetTheme("nova")
+    local base = UI.Base.c.accent
+    check(UI.T.c.accent.r == base.r, "accent par défaut = thème")
+    UI.SetAccent("200 10 30")
+    eq(UI.T.c.accent.r, 200, "accent appliqué (rouge)")
+    check(UI.T.c.title.r < UI.T.c.accent.r, "barre de titre assombrie")
+    eq(UI.Themes.nova.c.accent.r, base.r, "le thème de base n'est pas modifié")
+    UI.SetAccent("250 250 250")
+    eq(UI.T.c.accentText.r, 20, "texte sombre sur accent clair")
+    UI.SetAccent("999 -4 abc")
+    eq(UI.T.c.accent.r, base.r, "valeur invalide ignorée")
+    UI.SetAccent("300 0 0")
+    eq(UI.T.c.accent.r, 255, "composante bornée à 255")
+    UI.SetTheme("retro")
+    UI.SetAccent("0 100 0")
+    check(UI.T.c.title2 ~= nil and UI.T.c.title.g > 0, "retro : dégradé de titre teinté")
+    UI.SetAccent("")
+    eq(UI.T.c.accent.b, 128, "retour au thème Retro98")
+    UI.SetTheme("nova")
+end
+
+section("Bureau : raccourcis sur le bureau et réglages")
+do
+    local SC = CW.Shortcuts
+    SC.List = {}
+    for _, theme in ipairs({ "nova", "terra", "retro" }) do
+        local r = OS.Open({ CWTheme = theme, IsValid = function() return false end })
+        timer.Flush()
+        SC.List = {}
+        SC.Add({ type = "app", app = "calc", label = "Calcul" })
+        SC.Add({ type = "url", url = "https://fr.wikipedia.org", label = "Wikipédia" })
+        SC.Add({ type = "file", path = "Documents/n.txt", label = "Note" })
+        r:BuildDesktopIcons()
+        local n = 0
+        for _, p in ipairs(r.IconPanels) do if p:IsValid() then n = n + 1 end end
+        check(n >= 3, theme .. " : icônes de raccourcis créées (" .. n .. ")")
+        MOCK.lastError = nil
+        noErrors(MOCK.exercise(r), theme .. " : dessin avec raccourcis")
+        -- ouverture d'un raccourci appli
+        local w = SC.Open(r, SC.List[1])
+        check(w and w:IsValid() and w.cwApp == "calc", theme .. " : raccourci -> calculatrice")
+        w:CloseWindow()
+        -- ouverture URL -> navigateur
+        local bw = SC.Open(r, SC.List[2])
+        check(bw and bw.cwApp == "browser", theme .. " : raccourci URL -> navigateur")
+        bw:CloseWindow()
+        -- fichier absent : pas de crash
+        SC.Open(r, SC.List[3])
+        check(true, theme .. " : fichier absent géré")
+        -- fichier présent -> éditeur
+        FS.Write("Documents/n.txt", "bonjour")
+        local ew = SC.Open(r, SC.List[3])
+        check(ew and ew.cwApp == "editor", theme .. " : raccourci fichier -> éditeur")
+        ew.cwDiscard = true
+        ew:CloseWindow()
+        -- boîte de dialogue + pages de réglages
+        local d = SC.OpenDialog(r)
+        check(d and d:IsValid(), theme .. " : dialogue de raccourci")
+        noErrors(MOCK.exercise(d), theme .. " : dessin du dialogue")
+        local errs = MOCK.clickAll(d, function(pn) return pn.cwText == "Annuler" end)
+        noErrors(errs, theme .. " : clics dans le dialogue")
+        if d:IsValid() then d:CloseWindow() end
+        for _, page in ipairs({ "color", "desk", "look" }) do
+            local sw = r:OpenApp("settings", { page = page })
+            noErrors(MOCK.exercise(sw), theme .. " : réglages/" .. page)
+            noErrors(MOCK.clickAll(sw), theme .. " : réglages/" .. page .. " clics")
+        end
+        UI.SetAccent("")
+        r:Shutdown()
+    end
+    SC.List = {}
+end
+
+section("Micro-applications : interactions")
+do
+    local r = OS.Open({ CWTheme = "retro", IsValid = function() return false end })
+    timer.Flush()
+    -- éditeur : enregistrement via l'API de fichiers
+    local ew = r:OpenApp("editor", {})
+    check(ew and ew:IsValid(), "éditeur ouvert")
+    FS.Write("Documents/e.txt", "alpha beta")
+    ew:OnAppArgs({ path = "Documents/e.txt" })
+    check(true, "éditeur : ouverture d'un fichier")
+    ew.cwDiscard = true; ew:CloseWindow()
+    -- dessin : ouverture d'un fichier valide / invalide
+    FS.Write("Documents/d.txt", CW.Paint.Serialize({ { r = 1, g = 2, b = 3, size = 5, pts = { 0, 0, 100, 100 } } }))
+    local pw = r:OpenApp("paint", { path = "Documents/d.txt" })
+    noErrors(MOCK.exercise(pw), "dessin : fichier relu et dessiné")
+    pw:CloseWindow()
+    FS.Write("Documents/x.txt", "pas un dessin")
+    pw = r:OpenApp("paint", { path = "Documents/x.txt" })
+    noErrors(MOCK.exercise(pw), "dessin : fichier invalide ignoré")
+    pw:CloseWindow()
+    -- démineur : dessin sur chaque niveau
+    local mw = r:OpenApp("mines", {})
+    noErrors(MOCK.exercise(mw), "démineur : dessin")
+    MOCK.clickAll(mw)
+    noErrors(MOCK.exercise(mw), "démineur : dessin après clics (niveaux)")
+    mw:CloseWindow()
+    r:Shutdown()
 end
 
 ---------------------------------------------------------------------------

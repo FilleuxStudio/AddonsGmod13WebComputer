@@ -36,6 +36,12 @@ def wall_svg(name, w=1280, h=720):
         extra = ''.join(f'<text x="{x}" y="{y}" font-family="monospace" font-size="16" fill="#2BFFA0" opacity="{r.uniform(0.05,0.35):.2f}">{"".join(r.choice("01ABCDEF") for _ in range(r.randint(6,16)))}</text>'
                         for x in range(10, w, 70) for y in range(20, h, 26) if r.random() < 0.25)
         extra += ''.join(f'<path d="M0 {y} H{w}" stroke="#2BFFA0" stroke-opacity="0.025" stroke-width="2"/>' for y in range(0, h, 6))
+    elif name == "retro":
+        bg = '<rect width="100%" height="100%" fill="#008080"/>'
+        extra = ('<rect width="100%" height="100%" fill="url(#vg)"/>'
+                 + ''.join(f'<circle cx="{x}" cy="{y}" r="2" fill="#fff" opacity="0.10"/>' for x in range(20, w, 48) for y in range(20, h, 48))
+                 + '<g opacity="0.10" fill="#fff"><rect x="860" y="470" width="260" height="170" rx="6"/><rect x="880" y="490" width="220" height="120" fill="#008080"/></g>')
+        defs = defs.replace('</defs>', '<radialGradient id="vg" cx="0.5" cy="0.5" r="0.75"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.28"/></radialGradient></defs>')
     elif name == "sandbox":
         bg = '<rect width="100%" height="100%" fill="#3B4252"/>' + blobs(4, ["#F2B134", "#5E81AC", "#A3BE8C", "#BF616A"], 5)
         r = random.Random(5)
@@ -56,11 +62,12 @@ def screen_glyph(kind, accent, w=256):
         "terra": '<rect x="46" y="48" width="12" height="102" rx="3" fill="#fff" opacity="0.9"/><circle cx="52" cy="62" r="3" fill="%s"/><circle cx="52" cy="80" r="3" fill="%s"/>' % (accent, accent),
         "cipher": '<path d="M70 70 L96 88 L70 106" stroke="#2BFFA0" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 108 H150" stroke="#2BFFA0" stroke-width="8" stroke-linecap="round"/>',
         "sandbox": '<rect x="70" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.9"/><rect x="120" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.6"/><rect x="170" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.4"/>',
+        "retro": '<rect x="62" y="64" width="132" height="86" fill="#c0c0c0"/><rect x="62" y="64" width="132" height="14" fill="#000080"/><rect x="68" y="86" width="120" height="58" fill="#fff"/><path d="M76 100 H170 M76 114 H150" stroke="#808080" stroke-width="5"/><rect x="34" y="150" width="188" height="16" fill="#c0c0c0"/><rect x="38" y="154" width="38" height="9" fill="#000080"/>',
         "web": '<circle cx="128" cy="96" r="34" stroke="#fff" stroke-width="7" fill="none"/><ellipse cx="128" cy="96" rx="14" ry="34" stroke="#fff" stroke-width="5" fill="none"/><path d="M94 96 H162" stroke="#fff" stroke-width="5"/>',
         "music": '<path d="M112 120 V72 L156 62 V108" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="102" cy="122" rx="14" ry="10" fill="#fff"/><ellipse cx="146" cy="110" rx="14" ry="10" fill="#fff"/>',
     }[kind]
     bgs = {"nova": ("#2F7BFF", "#7A4DFF"), "terra": ("#E95420", "#8E2A7A"), "cipher": ("#0E3A55", "#04100C"),
-           "sandbox": ("#F2B134", "#5E81AC"), "web": ("#18C6E8", "#2457E6"), "music": ("#FF5CA8", "#7B3FE4")}[kind]
+           "sandbox": ("#F2B134", "#5E81AC"), "web": ("#18C6E8", "#2457E6"), "retro": ("#008080", "#006666"), "music": ("#FF5CA8", "#7B3FE4")}[kind]
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{w}" viewBox="0 0 256 256">'
             f'<defs><linearGradient id="sc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{bgs[0]}"/><stop offset="1" stop-color="{bgs[1]}"/></linearGradient>'
             f'<linearGradient id="fr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A5568"/><stop offset="1" stop-color="#1A202C"/></linearGradient>'
@@ -85,12 +92,16 @@ def cover_svg(w=1280, h=640):
                '<rect x="70" y="50" width="150" height="90" rx="8" fill="#fff" opacity="0.92"/>')
     gl_term = ('<rect x="40" y="40" width="200" height="110" rx="6" fill="#050A10"/><path d="M54 66 L70 78 L54 90" stroke="#2BFFA0" stroke-width="5" fill="none" stroke-linecap="round"/>'
                '<rect x="80" y="86" width="60" height="5" rx="2" fill="#2BFFA0"/><rect x="54" y="106" width="110" height="4" rx="2" fill="#2BFFA0" opacity="0.5"/>')
+    gl_retro = ('<rect x="10" y="10" width="280" height="170" fill="#008080"/><rect x="50" y="34" width="150" height="98" fill="#c0c0c0" stroke="#fff" stroke-width="2"/>'
+                '<rect x="54" y="38" width="142" height="14" fill="#000080"/><rect x="60" y="60" width="130" height="64" fill="#fff"/>'
+                '<rect x="10" y="156" width="280" height="24" fill="#c0c0c0"/><rect x="16" y="160" width="52" height="16" fill="#c0c0c0" stroke="#000" stroke-width="1"/>')
     return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">
 <defs>
 <filter id="b" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="80"/></filter>
 <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F7BFF"/><stop offset="1" stop-color="#7A4DFF"/></linearGradient>
 <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E95420"/><stop offset="1" stop-color="#8E2A7A"/></linearGradient>
 <linearGradient id="g3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0E3A55"/><stop offset="1" stop-color="#04100C"/></linearGradient>
+<linearGradient id="g4" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#008080"/><stop offset="1" stop-color="#006666"/></linearGradient>
 <linearGradient id="t" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7CC4FF"/><stop offset="1" stop-color="#C58CFF"/></linearGradient>
 <filter id="sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="14" stdDeviation="14" flood-opacity="0.5"/></filter>
 </defs>
@@ -101,19 +112,20 @@ def cover_svg(w=1280, h=640):
 <g stroke="#fff" stroke-opacity="0.05" stroke-width="2">{"".join(f'<path d="M0 {i*40} H1280"/>' for i in range(17))}</g>
 <g filter="url(#sh)">
  {mini(800, 350, 0.85, "g3", "", gl_term)}
+ {mini(1040, 410, 0.75, "g4", "", gl_retro)}
  {mini(990, 110, 0.9, "g2", "", gl_dock)}
  {mini(790, 80, 1.15, "g1", "", gl_bar)}
 </g>
 <text x="70" y="270" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-weight="800" font-size="90" fill="url(#t)">ComputerWeb</text>
 <text x="74" y="328" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-weight="500" font-size="32" fill="#E8EEFF">Ordinateurs jouables pour Garry's Mod</text>
 <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-weight="600" font-size="24" fill="#fff">
- <rect x="74" y="378" width="170" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="104" y="409">4 thèmes</text>
+ <rect x="74" y="378" width="170" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="104" y="409">5 thèmes</text>
  <rect x="258" y="378" width="200" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="284" y="409">Navigateur</text>
  <rect x="472" y="378" width="140" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="496" y="409">Radio</text>
- <rect x="74" y="438" width="196" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="100" y="469">Terminal</text>
- <rect x="284" y="438" width="260" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="310" y="469">DarkRP &amp; Sandbox</text>
+ <rect x="74" y="438" width="240" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="100" y="469">Jeux &amp; outils</text>
+ <rect x="328" y="438" width="260" height="46" rx="23" fill="#fff" opacity="0.14"/><text x="354" y="469">DarkRP &amp; Sandbox</text>
 </g>
-<text x="74" y="590" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="22" fill="#9FB0E0">Version 2.0 • par FilleuxStudio</text>
+<text x="74" y="590" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="22" fill="#9FB0E0">Version 2.1 • par FilleuxStudio</text>
 </svg>'''
 
 
@@ -145,10 +157,10 @@ def main():
     with sync_playwright() as p:
         b = p.chromium.launch()
         pg = b.new_context(device_scale_factor=1).new_page()
-        for n in ["nova", "terra", "cipher", "sandbox", "aurora", "graphite"]:
+        for n in ["nova", "terra", "cipher", "sandbox", "retro", "aurora", "graphite"]:
             render(pg, wall_svg(n), os.path.join(WALL, n + ".jpg"), 1280, 720, jpg=True)
         for cls, kind in {"computerWindows": "nova", "computerUbuntu": "terra", "computerKali": "cipher",
-                          "computerGarrysMod": "sandbox", "monitorMusic": "music", "monitorMusciTwo": "web"}.items():
+                          "computerGarrysMod": "sandbox", "computerRetro": "retro", "monitorMusic": "music", "monitorMusciTwo": "web"}.items():
             accent = {"terra": "#E95420"}.get(kind, "#fff")
             render(pg, screen_glyph(kind, accent), os.path.join(ENT, cls + ".png"), 256, 256)
         pg2 = b.new_context(device_scale_factor=2).new_page()

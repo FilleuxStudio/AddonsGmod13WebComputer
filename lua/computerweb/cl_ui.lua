@@ -1,7 +1,7 @@
 --[[----------------------------------------------------------------------------
     ComputerWeb - Bibliothèque d'interface (client)
       * échelle + polices
-      * thèmes (4 "systèmes" : nova, terra, cipher, sandbox)
+      * thèmes (5 "systèmes" : nova, terra, cipher, sandbox, retro)
       * widgets : bouton, champ de texte, curseur, fenêtre déplaçable
 ------------------------------------------------------------------------------]]
 
@@ -56,7 +56,7 @@ end
 -- layout : "bottom" = barre des tâches en bas | "side" = dock à gauche + barre du haut
 UI.Themes = {
     nova = {
-        id = "nova", name = "Nova", os = "Nova OS", layout = "bottom", mono = false,
+        id = "nova", name = "Nova", os = "Nova OS", layout = "bottom", mono = false, tintTitle = true,
         wallpaper = "nova", boot = "computerweb/boot_nova.wav", radius = 6,
         startLabel = "Démarrer", shutdownLabel = "Éteindre", prompt = "C:\\>",
         c = {
@@ -70,7 +70,7 @@ UI.Themes = {
         },
     },
     terra = {
-        id = "terra", name = "Terra", os = "Terra OS", layout = "side", mono = false,
+        id = "terra", name = "Terra", os = "Terra OS", layout = "side", mono = false, tintTitle = true,
         wallpaper = "terra", boot = "computerweb/boot_terra.wav", radius = 10,
         startLabel = "Applications", shutdownLabel = "Éteindre", prompt = "$",
         c = {
@@ -113,14 +113,122 @@ UI.Themes = {
     },
 }
 
-UI.ThemeOrder = { "nova", "terra", "cipher", "sandbox" }
-UI.Wallpapers = { "nova", "terra", "cipher", "sandbox", "aurora", "graphite" }
+-- Retro98 : look "années 90" (relief biseauté, barre de titre dégradée). Création originale.
+UI.Themes.retro = {
+    id = "retro", name = "Retro98", os = "Retro OS 98", layout = "bottom", mono = false,
+    bevel = true, tintTitle = true,
+    wallpaper = "retro", boot = "computerweb/boot_retro.wav", radius = 0,
+    startLabel = "Démarrer", shutdownLabel = "Arrêter...", prompt = "C:\\RETRO>",
+    c = {
+        window     = Color(192, 192, 192), windowText = Color(0, 0, 0),       dim = Color(96, 96, 96),
+        title      = Color(0, 0, 128),     title2 = Color(16, 132, 208),      titleOff = Color(128, 128, 128),
+        titleText  = Color(255, 255, 255),
+        bar        = Color(192, 192, 192, 255), barText = Color(0, 0, 0),
+        accent     = Color(0, 0, 128),     accentHi = Color(16, 70, 176),     accentText = Color(255, 255, 255),
+        input      = Color(255, 255, 255), border = Color(128, 128, 128),     panel = Color(192, 192, 192),
+        panelHi    = Color(210, 210, 210), danger = Color(180, 0, 0),         ok = Color(0, 120, 0),
+        menu       = Color(192, 192, 192, 255),
+    },
+}
 
-UI.T = UI.Themes.nova  -- thème courant
+UI.ThemeOrder = { "nova", "terra", "cipher", "sandbox", "retro" }
+UI.Wallpapers = { "nova", "terra", "cipher", "sandbox", "retro", "aurora", "graphite" }
+
+-- Couleur d'accent choisie par le joueur (Paramètres > Apparence). Vide = couleur du thème.
+UI.CVAccent = CreateClientConVar("cw_accent", "", true, false, "Couleur d'accent des ordinateurs (r g b), vide = thème")
+
+--- Applique tout de suite une couleur d'accent ("r g b", ou "" = thème). La sauvegarde
+--- dans le convar est faite par l'appelant (RunConsoleCommand("cw_accent", UI.AccentOverride)).
+function UI.SetAccent(str)
+    UI.AccentOverride = tostring(str or "")
+    UI.ApplyColors()
+end
+
+function UI.GetAccent()
+    local raw = UI.AccentOverride
+    if raw == nil then raw = UI.CVAccent:GetString() end
+    local r, g, b = tostring(raw):match("^%s*(%d+)%s+(%d+)%s+(%d+)%s*$")
+    if not r then return nil end
+    return Color(math.Clamp(tonumber(r), 0, 255), math.Clamp(tonumber(g), 0, 255), math.Clamp(tonumber(b), 0, 255))
+end
+
+local function lum(c) return c.r * 0.299 + c.g * 0.587 + c.b * 0.114 end
+
+--- Recalcule les couleurs du thème courant (copie du thème de base + accent joueur).
+function UI.ApplyColors()
+    local base, t = UI.Base, UI.T
+    if not base or not t then return end
+    for k, v in pairs(base.c) do t.c[k] = v end
+    local acc = UI.GetAccent()
+    if acc then
+        local c = t.c
+        c.accent = acc
+        c.accentHi = UI.Mix(acc, color_white, 0.3)
+        c.accentText = lum(acc) > 150 and Color(20, 20, 24) or Color(255, 255, 255)
+        if t.tintTitle then
+            c.title = UI.Mix(acc, color_black, 0.35)
+            if base.c.title2 then c.title2 = UI.Mix(acc, color_white, 0.25) end
+        end
+    end
+end
+
+UI.Base = UI.Themes.nova
+UI.T = { c = {} }
+for k, v in pairs(UI.Themes.nova) do if k ~= "c" then UI.T[k] = v end end
 
 function UI.SetTheme(id)
-    UI.T = UI.Themes[id] or UI.Themes.nova
-    return UI.T
+    local base = UI.Themes[id] or UI.Themes.nova
+    local t = {}
+    for k, v in pairs(base) do if k ~= "c" then t[k] = v end end
+    t.c = {}
+    UI.Base, UI.T = base, t
+    UI.ApplyColors()
+    return t
+end
+UI.SetTheme("nova")
+
+---------------------------------------------------------------------------
+-- Relief biseauté (thème Retro98) et dégradé horizontal
+---------------------------------------------------------------------------
+local BV = {
+    light = Color(223, 223, 223), white = Color(255, 255, 255),
+    gray = Color(128, 128, 128), dark = Color(10, 10, 10),
+}
+
+local function frame(x, y, w, h, tl, br, t)
+    surface.SetDrawColor(tl.r, tl.g, tl.b, 255)
+    surface.DrawRect(x, y, w - t, t)
+    surface.DrawRect(x, y, t, h - t)
+    surface.SetDrawColor(br.r, br.g, br.b, 255)
+    surface.DrawRect(x, y + h - t, w, t)
+    surface.DrawRect(x + w - t, y, t, h)
+end
+
+--- Rectangle en relief (raised = true) ou en creux (raised = false).
+function UI.Bevel(x, y, w, h, raised, face)
+    local t = math.max(1, UI.S(1))
+    face = face or UI.T.c.panel
+    surface.SetDrawColor(face.r, face.g, face.b, 255)
+    surface.DrawRect(x, y, w, h)
+    if raised then
+        frame(x, y, w, h, BV.light, BV.dark, t)
+        frame(x + t, y + t, w - 2 * t, h - 2 * t, BV.white, BV.gray, t)
+    else
+        frame(x, y, w, h, BV.gray, BV.white, t)
+        frame(x + t, y + t, w - 2 * t, h - 2 * t, BV.dark, BV.light, t)
+    end
+end
+
+--- Dégradé horizontal a -> b
+function UI.HGradient(x, y, w, h, a, b)
+    local n = 28
+    for i = 0, n - 1 do
+        local col = UI.Mix(a, b, i / (n - 1))
+        surface.SetDrawColor(col.r, col.g, col.b, 255)
+        local x0 = x + math.floor(w * i / n)
+        local x1 = x + math.floor(w * (i + 1) / n)
+        surface.DrawRect(x0, y, math.max(x1 - x0, 1), h)
+    end
 end
 
 ---------------------------------------------------------------------------
@@ -150,7 +258,7 @@ end
 -- Toutes les autres sont des glyphes blancs que l'appelant teinte (couleur du texte du thème).
 UI.ColorIcons = {
     browser = true, files = true, notepad = true, music = true, terminal = true, settings = true,
-    folder = true, file = true,
+    folder = true, file = true, editor = true, calc = true, mines = true, paint = true,
 }
 
 function UI.DrawIcon(name, x, y, w, h, col)
@@ -212,7 +320,22 @@ function UI.Button(parent, text, icon, onClick, kind)
         if self.cwDisabled then fg = UI.Alpha(fg, 110) end
         if self:IsDown() then bg = UI.Mix(bg, color_black, 0.12) end
 
-        draw.RoundedBox(S(T.radius), 0, 0, w, h, bg)
+        local ox, oy = 0, 0
+        if T.bevel then
+            local down = self:IsDown()
+            if self.cwKind == "accent" then
+                surface.SetDrawColor(0, 0, 0, 255)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+                UI.Bevel(1, 1, w - 2, h - 2, not down, c.panel)
+            else
+                UI.Bevel(0, 0, w, h, not down, c.panel)
+            end
+            fg = self.cwKind == "danger" and c.danger or c.windowText
+            if self.cwDisabled then fg = c.dim end
+            if down then ox, oy = 1, 1 end
+        else
+            draw.RoundedBox(S(T.radius), 0, 0, w, h, bg)
+        end
 
         local ic = self.cwIcon
         local pad = S(8)
@@ -222,15 +345,15 @@ function UI.Button(parent, text, icon, onClick, kind)
             local tw = surface.GetTextSize(self.cwText)
             local isz = ic and math.floor(h * 0.56) or 0
             local total = tw + (ic and (isz + S(7)) or 0)
-            local x = math.floor((w - total) / 2)
+            local x = math.floor((w - total) / 2) + ox
             if ic then
-                UI.DrawIcon(ic, x, math.floor((h - isz) / 2), isz, isz, UI.ColorIcons[ic] and color_white or fg)
+                UI.DrawIcon(ic, x, math.floor((h - isz) / 2) + oy, isz, isz, UI.ColorIcons[ic] and color_white or fg)
                 x = x + isz + S(7)
             end
-            draw.SimpleText(self.cwText, font, x, h / 2, fg, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(self.cwText, font, x, h / 2 + oy, fg, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         elseif ic then
             local isz = math.floor(math.min(w, h) - pad)
-            UI.DrawIcon(ic, math.floor((w - isz) / 2), math.floor((h - isz) / 2), isz, isz, UI.ColorIcons[ic] and color_white or fg)
+            UI.DrawIcon(ic, math.floor((w - isz) / 2) + ox, math.floor((h - isz) / 2) + oy, isz, isz, UI.ColorIcons[ic] and color_white or fg)
         end
     end
 
@@ -269,9 +392,13 @@ function UI.Entry(parent, placeholder, multiline)
     e.Paint = function(self, w, h)
         local T = UI.T
         local c = T.c
-        draw.RoundedBox(S(T.radius), 0, 0, w, h, c.border)
-        draw.RoundedBox(S(T.radius), 1, 1, w - 2, h - 2, c.input)
-        if self:HasFocus() then
+        if T.bevel then
+            UI.Bevel(0, 0, w, h, false, c.input)
+        else
+            draw.RoundedBox(S(T.radius), 0, 0, w, h, c.border)
+            draw.RoundedBox(S(T.radius), 1, 1, w - 2, h - 2, c.input)
+        end
+        if self:HasFocus() and not T.bevel then
             surface.SetDrawColor(c.accent.r, c.accent.g, c.accent.b, 255)
             surface.DrawOutlinedRect(0, 0, w, h, 2)
         end
@@ -314,8 +441,13 @@ function UI.Slider(parent, value, onChange)
         local c = UI.T.c
         local pad = S(8)
         local ty = math.floor(h / 2) - S(2)
-        draw.RoundedBox(S(2), pad, ty, w - pad * 2, S(4), c.panelHi)
         local fw = (w - pad * 2) * self.cwValue
+        if UI.T.bevel then
+            UI.Bevel(pad, ty - 1, w - pad * 2, S(6), false, c.panelHi)
+            UI.Bevel(math.floor(pad + fw - S(5)), math.floor(h / 2 - S(10)), S(10), S(20), true, c.panel)
+            return
+        end
+        draw.RoundedBox(S(2), pad, ty, w - pad * 2, S(4), c.panelHi)
         draw.RoundedBox(S(2), pad, ty, fw, S(4), c.accent)
         UI.Circle(pad + fw, h / 2, S(7), c.accent, 20)
     end
@@ -327,7 +459,7 @@ end
 ---------------------------------------------------------------------------
 function UI.Window(desktop, opts)
     local T = UI.T
-    local TB = S(32)
+    local TB = S(T.bevel and 27 or 32)
     local parent = desktop.Area
 
     local win = vgui.Create("DPanel", parent)
@@ -355,11 +487,19 @@ function UI.Window(desktop, opts)
         local c = th.c
         local r = S(th.radius)
         local active = self:IsActive()
-        -- ombre
-        draw.RoundedBox(r + S(3), -S(3), -S(1), w2 + S(6), h2 + S(6), Color(0, 0, 0, active and 70 or 40))
-        draw.RoundedBox(r, 0, 0, w2, h2, c.border)
-        draw.RoundedBox(r, 1, 1, w2 - 2, h2 - 2, c.window)
-        draw.RoundedBoxEx(r, 1, 1, w2 - 2, TB, active and c.title or c.titleOff, true, true, false, false)
+        if th.bevel then
+            UI.Bevel(0, 0, w2, h2, true, c.window)
+            local m = S(3)
+            local a = active and c.title or c.titleOff
+            local b = active and (c.title2 or c.title) or UI.Mix(c.titleOff, color_white, 0.35)
+            UI.HGradient(m, m, w2 - m * 2, TB - m, a, b)
+        else
+            -- ombre
+            draw.RoundedBox(r + S(3), -S(3), -S(1), w2 + S(6), h2 + S(6), Color(0, 0, 0, active and 70 or 40))
+            draw.RoundedBox(r, 0, 0, w2, h2, c.border)
+            draw.RoundedBox(r, 1, 1, w2 - 2, h2 - 2, c.window)
+            draw.RoundedBoxEx(r, 1, 1, w2 - 2, TB, active and c.title or c.titleOff, true, true, false, false)
+        end
 
         local tx = S(10)
         if self.cwIcon then
@@ -410,11 +550,34 @@ function UI.Window(desktop, opts)
         local b = vgui.Create("DButton", bar)
         b:SetText("")
         b:Dock(RIGHT)
-        b:SetWide(S(38))
+        if T.bevel then
+            b:SetWide(S(22))
+            b:DockMargin(0, S(5), kind == "close" and S(5) or S(2), S(3))
+        else
+            b:SetWide(S(38))
+        end
         b.cwHover = 0
         b.Paint = function(self, bw, bh)
             local hv = enterHover(self)
             local cc = UI.T.c
+            if UI.T.bevel then
+                local down = self:IsDown()
+                UI.Bevel(0, 0, bw, bh, not down, cc.panel)
+                local o = down and 1 or 0
+                local cx, cy, s2 = bw / 2 + o, bh / 2 + o, S(4)
+                surface.SetDrawColor(0, 0, 0, 255)
+                if kind == "close" then
+                    for d = 0, 1 do
+                        surface.DrawLine(cx - s2 + d, cy - s2, cx + s2 + 1 + d, cy + s2 + 1)
+                        surface.DrawLine(cx - s2 + d, cy + s2, cx + s2 + 1 + d, cy - s2 - 1)
+                    end
+                elseif kind == "min" then
+                    surface.DrawRect(cx - s2, cy + s2 - 2, s2 * 2, 3)
+                else
+                    surface.DrawOutlinedRect(cx - s2, cy - s2, s2 * 2, s2 * 2, 2)
+                end
+                return
+            end
             if hv > 0.01 then
                 local col = kind == "close" and cc.danger or Color(255, 255, 255, 40)
                 draw.RoundedBox(0, 0, 0, bw, bh, UI.Alpha(col, math.floor(hv * (kind == "close" and 255 or 60))))
@@ -440,7 +603,7 @@ function UI.Window(desktop, opts)
     -- Zone de contenu
     local content = vgui.Create("DPanel", win)
     content:Dock(FILL)
-    content:DockMargin(1, 0, 1, 1)
+    if T.bevel then content:DockMargin(S(4), 0, S(4), S(4)) else content:DockMargin(1, 0, 1, 1) end
     content.Paint = function() end
     win.Content = content
     function win:GetContent() return self.Content end
