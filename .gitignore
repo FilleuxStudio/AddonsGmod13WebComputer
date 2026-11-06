@@ -1,0 +1,10 @@
+# Fichiers temporaires / éditeurs
+*.psd
+*.bak
+*.tmp
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+# Archives générées
+*.gma
