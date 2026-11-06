@@ -13,6 +13,7 @@ ENT.Spawnable   = false
 ENT.AdminOnly   = false
 ENT.Instructions = "Appuyez sur E pour utiliser l'ordinateur."
 
+ENT.CWKind  = "pc"          -- type d'appareil (outil Réseau du thème Cipher)
 ENT.CWTheme = "nova"
 ENT.CWModel = "models/props_lab/monitor02.mdl"
 

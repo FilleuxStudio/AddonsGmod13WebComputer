@@ -258,7 +258,7 @@ end
 -- Toutes les autres sont des glyphes blancs que l'appelant teinte (couleur du texte du thème).
 UI.ColorIcons = {
     browser = true, files = true, notepad = true, music = true, terminal = true, settings = true,
-    folder = true, file = true, editor = true, calc = true, mines = true, paint = true,
+    folder = true, file = true, editor = true, calc = true, mines = true, paint = true, netlab = true, matrix = true,
 }
 
 function UI.DrawIcon(name, x, y, w, h, col)

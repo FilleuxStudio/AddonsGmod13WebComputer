@@ -63,11 +63,12 @@ def screen_glyph(kind, accent, w=256):
         "cipher": '<path d="M70 70 L96 88 L70 106" stroke="#2BFFA0" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M108 108 H150" stroke="#2BFFA0" stroke-width="8" stroke-linecap="round"/>',
         "sandbox": '<rect x="70" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.9"/><rect x="120" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.6"/><rect x="170" y="66" width="40" height="30" rx="6" fill="#fff" opacity="0.4"/>',
         "retro": '<rect x="62" y="64" width="132" height="86" fill="#c0c0c0"/><rect x="62" y="64" width="132" height="14" fill="#000080"/><rect x="68" y="86" width="120" height="58" fill="#fff"/><path d="M76 100 H170 M76 114 H150" stroke="#808080" stroke-width="5"/><rect x="34" y="150" width="188" height="16" fill="#c0c0c0"/><rect x="38" y="154" width="38" height="9" fill="#000080"/>',
+        "radio": '<rect x="52" y="64" width="152" height="84" rx="10" fill="#6b4a2e"/><rect x="60" y="72" width="88" height="68" rx="6" fill="#2b1d12"/><g stroke="#c9a15a" stroke-width="3"><path d="M66 80 V132"/><path d="M74 80 V132"/><path d="M82 80 V132"/><path d="M90 80 V132"/><path d="M98 80 V132"/><path d="M106 80 V132"/><path d="M114 80 V132"/><path d="M122 80 V132"/><path d="M130 80 V132"/><path d="M138 80 V132"/></g><circle cx="176" cy="92" r="14" fill="#d8c89a" stroke="#4a3320" stroke-width="3"/><circle cx="176" cy="126" r="9" fill="#d8c89a" stroke="#4a3320" stroke-width="3"/><path d="M78 64 L52 34" stroke="#bbb" stroke-width="4"/><circle cx="52" cy="32" r="4" fill="#ddd"/>',
         "web": '<circle cx="128" cy="96" r="34" stroke="#fff" stroke-width="7" fill="none"/><ellipse cx="128" cy="96" rx="14" ry="34" stroke="#fff" stroke-width="5" fill="none"/><path d="M94 96 H162" stroke="#fff" stroke-width="5"/>',
         "music": '<path d="M112 120 V72 L156 62 V108" stroke="#fff" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="102" cy="122" rx="14" ry="10" fill="#fff"/><ellipse cx="146" cy="110" rx="14" ry="10" fill="#fff"/>',
     }[kind]
     bgs = {"nova": ("#2F7BFF", "#7A4DFF"), "terra": ("#E95420", "#8E2A7A"), "cipher": ("#0E3A55", "#04100C"),
-           "sandbox": ("#F2B134", "#5E81AC"), "web": ("#18C6E8", "#2457E6"), "retro": ("#008080", "#006666"), "music": ("#FF5CA8", "#7B3FE4")}[kind]
+           "sandbox": ("#F2B134", "#5E81AC"), "web": ("#18C6E8", "#2457E6"), "retro": ("#008080", "#006666"), "radio": ("#e8a94a", "#a8641f"), "music": ("#FF5CA8", "#7B3FE4")}[kind]
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{w}" viewBox="0 0 256 256">'
             f'<defs><linearGradient id="sc" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{bgs[0]}"/><stop offset="1" stop-color="{bgs[1]}"/></linearGradient>'
             f'<linearGradient id="fr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A5568"/><stop offset="1" stop-color="#1A202C"/></linearGradient>'
@@ -146,6 +147,23 @@ def icon_svg():
 </svg>'''
 
 
+
+def radio_svg():
+    grille = "".join(f'<path d="M{70 + i * 9} 98 V152"/>' for i in range(10))
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<defs><linearGradient id="wd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a5a34"/><stop offset="1" stop-color="#5a3a20"/></linearGradient>
+<filter id="sh" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="8" stdDeviation="7" flood-opacity="0.45"/></filter></defs>
+<g filter="url(#sh)">
+<path d="M70 82 L44 30" stroke="#c8c8c8" stroke-width="5" stroke-linecap="round"/><circle cx="43" cy="28" r="5" fill="#eee"/>
+<rect x="28" y="78" width="200" height="124" rx="16" fill="url(#wd)"/>
+<rect x="28" y="78" width="200" height="40" rx="16" fill="#fff" opacity="0.08"/>
+<rect x="44" y="92" width="108" height="94" rx="9" fill="#2b1d12"/>
+<g stroke="#c9a15a" stroke-width="4" stroke-linecap="round">{grille}</g>
+<circle cx="188" cy="118" r="20" fill="#e2d3a3" stroke="#3d2916" stroke-width="4"/><path d="M188 118 L196 106" stroke="#3d2916" stroke-width="4" stroke-linecap="round"/>
+<circle cx="188" cy="168" r="13" fill="#e2d3a3" stroke="#3d2916" stroke-width="4"/>
+<rect x="52" y="202" width="22" height="12" rx="3" fill="#3d2916"/><rect x="182" y="202" width="22" height="12" rx="3" fill="#3d2916"/>
+</g></svg>'''
+
 def render(pg, svg, path, w, h, jpg=False, scale=1):
     pg.set_viewport_size({"width": w, "height": h})
     pg.set_content(f'<body style="margin:0;background:transparent">{svg}</body>')
@@ -163,6 +181,7 @@ def main():
                           "computerGarrysMod": "sandbox", "computerRetro": "retro", "monitorMusic": "music", "monitorMusciTwo": "web"}.items():
             accent = {"terra": "#E95420"}.get(kind, "#fff")
             render(pg, screen_glyph(kind, accent), os.path.join(ENT, cls + ".png"), 256, 256)
+        render(pg, radio_svg(), os.path.join(ENT, "cw_radio.png"), 256, 256)
         pg2 = b.new_context(device_scale_factor=2).new_page()
         render(pg2, cover_svg(), os.path.join(DOCS, "cover.jpg"), 1280, 640, jpg=True)
         render(pg2, icon_svg(), os.path.join(DOCS, "icon.jpg"), 512, 512, jpg=True)

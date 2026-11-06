@@ -28,9 +28,12 @@ local CLIENT_FILES = {
     "computerweb/apps/cl_calc.lua",
     "computerweb/apps/cl_mines.lua",
     "computerweb/apps/cl_paint.lua",
+    "computerweb/apps/cl_netlab.lua",
+    "computerweb/apps/cl_matrix.lua",
     "computerweb/apps/cl_terminal.lua",
     "computerweb/apps/cl_settings.lua",
     "computerweb/cl_screen_remote.lua",
+    "computerweb/cl_radio_remote.lua",
 }
 
 if SERVER then

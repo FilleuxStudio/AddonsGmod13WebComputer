@@ -69,6 +69,8 @@ commands.help = function(st)
         "  wallpaper <nom>     changer le fond d'écran    theme          infos système",
         "  start <appli>       lancer une application     edit <fichier> ouvrir dans l'Éditeur",
         "  calc <expression>   calculer                   accent r g b   couleur du système",
+        "  scan                appareils à portée         ping <cible>   latence (simulée)",
+        "  ports <cible>       ports ouverts (simulés)    hack <cible>   intrusion simulée (Cipher)",
         "  date  whoami  hostname  uname  uptime  neofetch  ping <hôte>  exit",
     }
     for _, l in ipairs(lines) do st.out(l, l:sub(1, 1) ~= " " and "accent" or nil) end
@@ -187,7 +189,7 @@ commands.start = function(st, args)
     local id = (args[1] or ""):lower()
     if id == "" or not OS.Apps[id] then
         local names = {}
-        for _, aid in ipairs(OS.AppOrder) do names[#names + 1] = aid end
+        for _, aid in ipairs(OS.VisibleApps(UI.T.id)) do names[#names + 1] = aid end
         st.out("usage: start <application>   (" .. table.concat(names, ", ") .. ")", id == "" and "accent" or "err")
         return
     end
@@ -298,13 +300,51 @@ commands.neofetch = function(st)
     end
 end
 
+local function netTargets()
+    return CW.Net and CW.Net.Targets() or {}
+end
+
+commands.scan = function(st)
+    if not CW.Net then st.out("scan: module réseau indisponible", "err") return end
+    local list = CW.Net.Targets()
+    st.out("Appareils à portée (simulation, rien n'est envoyé sur Internet) :", "accent")
+    if #list == 0 then st.out("  aucun appareil détecté", "dim") return end
+    for _, t in ipairs(list) do
+        st.out(string.format("  %-15s %-16s %-11s %4.0f m", t.ip, t.host, CW.Net.KindName(t.kind), CW.Net.Meters(t.dist)))
+    end
+end
+
 commands.ping = function(st, args)
-    if not args[1] then st.out("usage: ping <hôte>", "err") return end
+    if not args[1] then st.out("usage: ping <hôte | ip | appareil>   (voir 'scan')", "err") return end
+    local t = CW.Net and CW.Net.Resolve(args[1], netTargets())
+    if t then
+        for _, l in ipairs(CW.Net.PingLines(t, 4)) do st.out(l[1], l[2]) end
+        return
+    end
     st.out("(simulation - aucune requête réseau n'est envoyée)", "dim")
     st.out("PING " .. args[1]:sub(1, 60))
     for i = 1, 3 do
         st.out(string.format("64 octets de %s : icmp_seq=%d ttl=57 temps=%.1f ms", args[1]:sub(1, 60), i, 8 + math.random() * 20))
     end
+end
+
+commands.ports = function(st, args)
+    local t = args[1] and CW.Net and CW.Net.Resolve(args[1], netTargets())
+    if not t then st.out("usage: ports <ip | appareil>   (voir 'scan')", "err") return end
+    st.out("Ports ouverts sur " .. t.host .. " :", "accent")
+    for _, p in ipairs(t.ports) do st.out(string.format("  %d/tcp  ouvert  %s", p[1], p[2])) end
+end
+
+commands.hack = function(st, args)
+    if UI.T.id ~= "cipher" then st.out("hack: commande réservée au système Cipher", "err") return end
+    local t = args[1] and CW.Net and CW.Net.Resolve(args[1], netTargets())
+    if not t then st.out("usage: hack <ip | appareil>   (voir 'scan') - simulation uniquement", "err") return end
+    if st.hacking then st.out("hack: une intrusion est déjà en cours", "err") return end
+    st.hacking = true
+    CW.Net.RunScript(CW.Net.HackScript(t), st.out, function() return IsValid(st.desktop) end, function()
+        st.hacking = false
+        CW.Net.Notify(t)
+    end)
 end
 
 commands.exit = function(st)

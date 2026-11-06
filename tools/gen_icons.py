@@ -88,6 +88,20 @@ ICONS["paint"] = tile("#FF9F43", "#E0357B",
     '<circle cx="48" cy="56" r="7" fill="#E0357B"/><circle cx="66" cy="44" r="7" fill="#FFC247"/>'
     '<circle cx="86" cy="56" r="7" fill="#2BC4B8"/><circle cx="50" cy="78" r="7" fill="#5B8CFF"/>')
 
+
+# --- Outils Cipher -------------------------------------------------------------
+ICONS["netlab"] = tile("#12303F", "#04100C",
+    '<circle cx="64" cy="66" r="34" stroke="#2BFFA0" stroke-width="5" fill="none" opacity="0.9"/>'
+    '<circle cx="64" cy="66" r="20" stroke="#2BFFA0" stroke-width="4" fill="none" opacity="0.6"/>'
+    '<circle cx="64" cy="66" r="6" fill="#2BFFA0"/>'
+    '<path d="M64 66 L92 44" stroke="#2BFFA0" stroke-width="5" stroke-linecap="round"/>'
+    '<circle cx="86" cy="52" r="5" fill="#FF5C6C"/><circle cx="44" cy="78" r="4" fill="#2BFFA0" opacity="0.8"/>')
+
+ICONS["matrix"] = tile("#06150F", "#010504",
+    "".join(f'<text x="{x}" y="{y}" font-family="monospace" font-weight="700" font-size="22" fill="#2BFFA0" opacity="{o}">{c}</text>'
+            for x, y, o, c in [(26,44,0.35,"1"),(26,66,0.65,"0"),(26,88,1,"7"),(50,34,0.4,"A"),(50,56,0.7,"3"),(50,78,1,"X"),(50,100,0.45,"0"),
+                               (74,48,0.4,"9"),(74,70,0.75,"F"),(74,92,1,"1"),(98,40,0.35,"0"),(98,62,0.65,"B"),(98,84,1,"4")]))
+
 # --- Dossier / fichier (couleur, sans tuile) --------------------------------
 ICONS["folder"] = (
     '<defs><linearGradient id="fg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD76A"/><stop offset="1" stop-color="#F2A93B"/></linearGradient>'

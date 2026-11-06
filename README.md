@@ -1,87 +1,106 @@
-<p align="center"><img src="docs/cover.jpg" alt="ComputerWeb" width="100%"></p>
+<p align="center"><img src="docs/cover_en.jpg" alt="ComputerWeb" width="100%"></p>
 
-# ComputerWeb — Ordinateurs jouables pour Garry's Mod
+<p align="center"><a href="README.fr.md">🇫🇷 Français</a> · 🇬🇧 English</p>
 
-Des ordinateurs et des écrans que les joueurs peuvent **vraiment utiliser** : un mini-système avec fenêtres, navigateur web, fichiers, bloc-notes, radio et terminal. Compatible **DarkRP**, Sandbox et tout serveur GMod 13.
+# ComputerWeb — Playable computers for Garry's Mod
 
-> Version 2.1 — refonte complète du vieil addon `AddonsGmod13WebComputer`, maintenant avec 5 « systèmes » et 10 applications.
+Computers and screens players can **actually use**: a mini operating system with windows, web browser, files, text editor, radio and terminal. Works with **DarkRP**, Sandbox and any GMod 13 server.
 
-## Fonctionnalités
+> Version 2.2 — 5 "systems", 12 apps, **Cipher** hacker-ambience tools and an **interactive 3D radio**.
+
+## Features
 
 | | |
 |---|---|
-| 🖥️ **5 thèmes** | **Nova** (barre des tâches), **Terra** (dock latéral), **Cipher** (mode hacker), **Sandbox** (ardoise), **Retro98** (relief biseauté années 90) |
-| 🎨 **Personnalisation** | Couleur d'accent au choix (en direct), fonds d'écran, raccourcis de bureau (application, site web ou fichier) avec icône à choisir |
-| 🌐 **Navigateur** | Tuiles d'accueil, DuckDuckGo / Bing / Google, SafeSearch, garde d'URL |
-| 📁 **Fichiers, Bloc-notes, Éditeur** | Dossiers et fichiers `.txt` par joueur (côté client). L'**Éditeur** ajoute rechercher/remplacer, taille de police, police fixe, ligne/colonne, nombre de mots |
-| 🧮 **Calculatrice** | Évaluateur maison (aucun code exécuté) : `+ - * / ^ %`, parenthèses, `sqrt sin cos tan ln log abs round`, `pi`, `e` |
-| 🎮 **Démineur & Dessin** | Démineur 3 niveaux (premier clic sûr) ; Dessin avec 12 couleurs, gomme, annuler, enregistrement dans Documents |
-| 🎵 **Musique** | Radios (SomaFM), favoris, URL personnalisée |
+| 🖥️ **5 themes** | **Nova** (taskbar), **Terra** (side dock), **Cipher** (hacker mode), **Sandbox** (slate), **Retro98** (bevelled 90s look) |
+| 🎨 **Customisation** | Live accent colour, wallpapers, desktop shortcuts (app, website or file) with a chosen icon |
+| 🌐 **Browser** | Home tiles, DuckDuckGo / Bing / Google, SafeSearch, URL guard |
+| 📁 **Files, Notepad, Editor** | Per-player folders and `.txt` files (client side). The **Editor** adds find/replace, font size, monospace, line/column, word count |
+| 🧮 **Calculator** | Home-made evaluator (no code executed): `+ - * / ^ %`, parentheses, `sqrt sin cos tan ln log abs round`, `pi`, `e` |
+| 🎮 **Minesweeper & Paint** | 3 levels (safe first click); Paint with 12 colours, eraser, undo, saves into Documents |
+| 🎵 **Music** | Radios (SomaFM), favourites, custom URL |
 | ⌨️ **Terminal** | `help ls cd cat mkdir touch rm mv echo open edit browse play stop start calc accent wallpaper theme neofetch ping…` |
-| 📺 **Écrans 3D** | Page web sur le modèle, chargée seulement de près, volume selon la distance, `E` = télécommande |
-| ⚙️ **Paramètres** | Thème, fond d'écran, diagnostic du moteur web |
+| 🕶️ **Cipher tools** | **Network** app (scan, ping, ports, *simulated* intrusion), **Matrix**, commands `scan` `ping` `ports` `hack`. Cipher theme only; they target computers, screens and radios placed in the world |
+| 📻 **3D radio** | `cw_radio` entity: press `E` to pick a station, switch off, set volume; spatial sound, state shared between players |
+| 📺 **3D screens** | Web page on the model, loaded only when close, distance-based volume, `E` = remote |
+| ⚙️ **Settings** | Theme, wallpaper, web-engine diagnostics |
 
-## Entités (menu `Q` → Entités → ComputerWeb)
+## Entities (`Q` menu → Entities → ComputerWeb)
 
-`computerWindows` (Nova) · `computerUbuntu` (Terra) · `computerKali` (Cipher) · `computerGarrysMod` (Sandbox) · `computerRetro` (Retro98) · `monitorMusic` · `monitorMusciTwo`
+`computerWindows` (Nova) · `computerUbuntu` (Terra) · `computerKali` (Cipher) · `computerGarrysMod` (Sandbox) · `computerRetro` (Retro98) · `cw_radio` (radio) · `monitorMusic` · `monitorMusciTwo`
 
-Appuyez sur **E** sur un ordinateur pour ouvrir le bureau.
+Press **E** on a computer to open its desktop.
 
-## Personnaliser son système
+## Cipher tools (ambience only, 100 % simulated)
 
-- **Paramètres → Couleurs** : 11 teintes prédéfinies ou curseurs rouge/vert/bleu ; appliqué immédiatement. Équivalent terminal : `accent 46 125 240` / `accent reset`.
-- **Clic droit sur le bureau → Nouveau raccourci…** (ou **Paramètres → Bureau**) : choisissez application, site web ou fichier, un nom et une icône. Clic droit sur un raccourci pour le supprimer (40 maximum).
-- Les réglages sont enregistrés sur le PC du joueur (`garrysmod/data/computerweb/`). Les sites passent toujours par la garde d'URL du serveur.
+The Cipher system (entity `computerKali`; the class name is kept for compatibility) offers:
 
-<p align="center"><img src="docs/retro98_preview.jpg" alt="Illustration du thème Retro98" width="70%"><br><em>Illustration du thème Retro98 (maquette, pas une capture du jeu).</em></p>
+- **Network** app (menu or `start netlab`): nearby machines, **Scan**, **Ping**, **Ports**, **Intrusion (simulation)**.
+- **Terminal**: `scan`, `ping <ip|name|#n>`, `ports <target>`, `hack <target>`.
+- **Matrix**: falling-code background.
+
+**Nothing is real**: no network request is sent, IPs are fictional (derived from the entity index) and the displayed "exploit" is made up. For roleplay scenarios, listen to `hook.Add("ComputerWeb_HackSimulated", "x", function(ply, ent) ... end)` (server side, after distance and 8 s cooldown checks).
+
+## 3D radio
+
+Spawn `cw_radio` (HL2 `citizenradio` model; no custom compiled model). **E** opens the remote: stations (`Radios` in the config), on/off, volume (`cw_radio_volume`, client side). Audio plays as 3D mono around the radio and only starts when you are nearby.
+
+## Customising your system
+
+- **Settings → Colours**: 11 presets or RGB sliders, applied instantly. Terminal: `accent 46 125 240` / `accent reset`.
+- **Right-click desktop → New shortcut…** (or **Settings → Desktop**): pick an app, website or file, a name and an icon. Right-click a shortcut to delete it (max 40).
+- Settings are stored on the player's PC (`garrysmod/data/computerweb/`). Websites always go through the server URL guard.
+
+<p align="center"><img src="docs/cover.jpg" alt="v2.1 illustration" width="48%"> <img src="docs/retro98_preview.jpg" alt="Retro98 theme illustration" width="48%"><br><em>Illustrations (mock-ups and 3D render, not in-game screenshots).</em></p>
 
 ## Installation
 
-- **Serveur / local** : copiez le dossier dans `garrysmod/addons/ComputerWeb/` (il doit contenir `addon.json` et `lua/`), puis redémarrez.
-- **Workshop** : publiez avec `gmad` / `gmpublish` ; `addon.json` exclut déjà `docs`, `tests`, `tools` et les fichiers markdown.
-- Pour **DarkRP** : aucune configuration, les entités sont spawnables par le menu `Q`. Pour les vendre, ajoutez-les dans votre `darkrp_customthings`.
+- **Server / local**: copy the folder to `garrysmod/addons/ComputerWeb/` (it must contain `addon.json` and `lua/`), then restart.
+- **Workshop**: publish with `gmad` / `gmpublish`; `addon.json` already excludes `docs`, `tests`, `tools` and markdown files.
+- **DarkRP**: no setup needed, entities spawn from the `Q` menu. To sell them, add them to your `darkrp_customthings`.
 
 ## Configuration
 
-Fichier `lua/computerweb/config.lua` (moteurs, tuiles, domaines, radios, préréglages d'écran) puis redémarrage. En direct, ConVars `cw_*` :
+File `lua/computerweb/config.lua` (engines, tiles, domains, radios, screen presets), then restart. Live `cw_*` ConVars:
 
-| ConVar | Défaut | Rôle |
+| ConVar | Default | Purpose |
 |---|---|---|
-| `cw_browser_enabled` | 1 | Active le navigateur |
-| `cw_music_enabled` | 1 | Active la musique |
-| `cw_safesearch` | 1 | Recherche protégée |
-| `cw_url_filter` | 0 | 1 = liste blanche stricte |
-| `cw_allowed_domains` | _vide_ | Domaines autorisés (virgules), remplace la config |
-| `cw_block_private_hosts` | 1 | Refuse localhost et réseaux privés |
-| `cw_use_distance` | 130 | Distance d'utilisation |
-| `cw_session_distance` | 260 | Fermeture du bureau si on s'éloigne (0 = jamais) |
-| `cw_screen_distance` | 700 | Distance de chargement d'un écran 3D |
-| `cw_screen_custom_url` | 0 | 1 = URL libre sur écran 3D pour tous (sinon admins) |
+| `cw_browser_enabled` | 1 | Enable the browser |
+| `cw_music_enabled` | 1 | Enable music |
+| `cw_safesearch` | 1 | Safe search |
+| `cw_url_filter` | 0 | 1 = strict allow-list |
+| `cw_allowed_domains` | _empty_ | Allowed domains (comma separated), overrides config |
+| `cw_block_private_hosts` | 1 | Refuse localhost and private networks |
+| `cw_use_distance` | 130 | Use distance |
+| `cw_session_distance` | 260 | Close desktop when walking away (0 = never) |
+| `cw_screen_distance` | 700 | Load distance of a 3D screen |
+| `cw_screen_custom_url` | 0 | 1 = anyone may enter a free URL on a 3D screen (otherwise admins) |
+| `cw_radio_volume` | 0.8 | 3D radio volume (client) |
 
-Hook pour votre propre règle : `hook.Add("ComputerWeb_CanOpenURL", "x", function(url, host) ... end)`.
-Commande superadmin : `cw_desktop` (ouvre le bureau sans ordinateur).
+Custom rule hook: `hook.Add("ComputerWeb_CanOpenURL", "x", function(url, host) ... end)`.
+Superadmin command: `cw_desktop` (opens the desktop without a computer).
 
-## Navigateur web : limites du moteur de GMod
+## Web browser: GMod engine limits
 
-Le moteur web de GMod dépend de la plateforme (Windows : CEF ; Linux/macOS : parfois Awesomium ou un CEF ancien). **YouTube et la vidéo mp4 ne marchent pas toujours en version de base**, d'où la présence de radios SomaFM (flux audio simples). Sous Linux/macOS, [GModPatchTool](https://github.com/solsticegamestudios/GModCEFCodecFix) met le moteur à jour et ajoute les codecs H.264/AAC. L'onglet **Paramètres → Diagnostic** indique ce que supporte votre client.
+GMod's web engine depends on the platform (Windows: CEF; Linux/macOS: sometimes Awesomium or an old CEF). **YouTube and mp4 video do not always work in the base game**, hence the SomaFM radios (plain audio streams). On Linux/macOS, [GModPatchTool](https://github.com/solsticegamestudios/GModCEFCodecFix) updates the engine and adds H.264/AAC codecs. **Settings → Diagnostics** shows what your client supports.
 
-## Sécurité
+## Security
 
-Schémas dangereux refusés, réseaux privés bloqués, validations serveur, anti-spam, aucun accès Lua depuis une page web. Voir `CHANGELOG.md`.
+Dangerous schemes refused, private networks blocked, server-side validation (distance, rate, ranges) including for the radio and Cipher tools, no Lua access from web pages. See `CHANGELOG.md`.
 
 ## Structure
 
 ```
-lua/autorun/computerweb.lua   chargeur
-lua/computerweb/              config, noyau, UI, OS, apps/
-lua/entities/                 ordinateurs et écrans
-materials/ sound/             assets originaux
-tools/                        scripts de génération des assets (icônes, fonds, sons)
-tests/                        tests Lua (python3 tests/run_tests.py)
+lua/autorun/computerweb.lua   loader
+lua/computerweb/              config, core, UI, OS, apps/
+lua/entities/                 computers, screens, radio
+materials/ sound/             original assets
+tools/                        asset generation scripts (icons, wallpapers, sounds)
+tests/                        Lua tests (python3 tests/run_tests.py)
 ```
 
-Les tests (`pip install lupa`) valident la logique avec un faux environnement GMod ; ils ne remplacent pas un essai en jeu.
+Tests (`pip install lupa`, 651 checks) validate logic against a fake GMod environment; they do not replace in-game testing. Worth checking in game: the radio model and 3D sound, Retro98 bevel rendering.
 
-## Crédits et licence
+## Credits and licence
 
-Par **FilleuxStudio**. Licence MIT (voir `LICENSE`). Tous les visuels et sons de la v2 sont originaux.
+By **FilleuxStudio**. MIT licence (see `LICENSE`). All visuals and sounds are original; the cover is a script-generated 3D render, not a game screenshot.

@@ -17,6 +17,7 @@ ENT.AdminOnly   = false
 ENT.Instructions = "Appuyez sur E pour ouvrir la télécommande."
 
 ENT.IsComputerWebScreen = true
+ENT.CWKind = "screen"      -- type d'appareil (outil Réseau du thème Cipher)
 ENT.DefaultURL = "https://www.youtube.com/"
 ENT.CWModel = "models/props_phx/rt_screen.mdl"
 

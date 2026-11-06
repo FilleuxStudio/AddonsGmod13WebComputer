@@ -10,6 +10,9 @@ local CW = ComputerWeb
 util.AddNetworkString("cw_os_open")        -- serveur -> client : ouvre le bureau
 util.AddNetworkString("cw_screen_menu")    -- serveur -> client : ouvre la télécommande
 util.AddNetworkString("cw_screen_set")     -- client -> serveur : change l'URL d'un écran
+util.AddNetworkString("cw_radio_menu")     -- serveur -> client : ouvre la télécommande de la radio
+util.AddNetworkString("cw_radio_set")      -- client -> serveur : station / marche-arrêt de la radio
+util.AddNetworkString("cw_hack_done")      -- client -> serveur : intrusion SIMULÉE terminée (hook RP)
 
 local lastAction = {}   -- anti-spam par joueur
 
@@ -39,6 +42,47 @@ function CW.OpenScreenMenu(ply, ent)
         net.WriteEntity(ent)
     net.Send(ply)
 end
+
+function CW.OpenRadioMenu(ply, ent)
+    if not CW.CanUseComputer(ply, ent) then return end
+    if not cooldown(ply, "radiomenu", 0.5) then return end
+
+    net.Start("cw_radio_menu")
+        net.WriteEntity(ent)
+    net.Send(ply)
+end
+
+net.Receive("cw_radio_set", function(_, ply)
+    if not IsValid(ply) then return end
+
+    local ent = net.ReadEntity()
+    local station = net.ReadUInt(8)
+    local on = net.ReadBool()
+
+    if not IsValid(ent) or ent.CWKind ~= "radio" then return end
+    if not CW.CanUseComputer(ply, ent) then return end
+    if not cooldown(ply, "radioset", 0.4) then return end
+
+    local n = #(CW.Config.Radios or {})
+    if n == 0 then return end
+    if station < 1 or station > n then return end
+
+    ent:SetStation(station)
+    ent:SetOn(on)
+end)
+
+-- Intrusion simulée (outil Réseau du thème Cipher) : purement cosmétique, mais les serveurs RP
+-- peuvent s'y brancher : hook.Add("ComputerWeb_HackSimulated", "x", function(ply, ent) ... end)
+net.Receive("cw_hack_done", function(_, ply)
+    if not IsValid(ply) then return end
+
+    local ent = net.ReadEntity()
+    if not IsValid(ent) or not ent.CWKind then return end
+    if ply:GetPos():Distance(ent:GetPos()) > 3000 then return end
+    if not cooldown(ply, "hack", 8) then return end
+
+    hook.Run("ComputerWeb_HackSimulated", ply, ent)
+end)
 
 net.Receive("cw_screen_set", function(_, ply)
     if not IsValid(ply) then return end

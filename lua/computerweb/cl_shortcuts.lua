@@ -163,7 +163,11 @@ end
 function SC.Open(desktop, e)
     if not e then return end
     if e.type == "app" then
-        if not CW.OS.Apps[e.app] then desktop:Toast("Application introuvable : " .. e.app) return end
+        local def = CW.OS.Apps[e.app]
+        if not def or not CW.OS.AppAllowed(def, desktop.Theme and desktop.Theme.id or UI.T.id) then
+            desktop:Toast("Application introuvable sur ce système : " .. e.app)
+            return
+        end
         return desktop:OpenApp(e.app)
     elseif e.type == "url" then
         return desktop:OpenApp("browser", { input = e.url })
@@ -272,7 +276,7 @@ function SC.OpenDialog(desktop, preset)
         if mode == "app" then
             local sc = vgui.Create("DScrollPanel", area)
             sc:Dock(FILL)
-            for _, id in ipairs(OS.AppOrder) do
+            for _, id in ipairs(OS.VisibleApps(UI.T.id)) do
                 local def = OS.Apps[id]
                 local b = UI.Button(sc, def.name, def.icon, function()
                     pickedApp = id

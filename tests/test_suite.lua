@@ -24,7 +24,7 @@ include("computerweb/config.lua")
 include("computerweb/sh_core.lua")
 local CW = ComputerWeb
 check(CW and CW.CheckURL, "sh_core chargé")
-eq(CW.Version, "2.1.0", "version")
+eq(CW.Version, "2.2.0", "version")
 
 ---------------------------------------------------------------------------
 -- Garde d'URL
@@ -133,13 +133,14 @@ include("computerweb/cl_ui.lua")
 include("computerweb/cl_fs.lua")
 include("computerweb/cl_shortcuts.lua")
 include("computerweb/cl_os.lua")
-for _, f in ipairs({ "files", "notepad", "browser", "music", "editor", "calc", "mines", "paint", "terminal", "settings" }) do
+for _, f in ipairs({ "files", "notepad", "browser", "music", "editor", "calc", "mines", "paint", "netlab", "matrix", "terminal", "settings" }) do
     include("computerweb/apps/cl_" .. f .. ".lua")
 end
 include("computerweb/cl_screen_remote.lua")
+include("computerweb/cl_radio_remote.lua")
 local FS, UI, OS = CW.FS, CW.UI, CW.OS
 check(FS and UI and OS, "modules client chargés")
-check(#OS.AppOrder == 10, "10 applications enregistrées", #OS.AppOrder)
+check(#OS.AppOrder == 12, "12 applications enregistrées", #OS.AppOrder)
 
 section("FS : noms et chemins")
 eq(FS.SanitizeName("Résumé été.txt"), "Resume ete.txt", "accents retirés")
@@ -431,6 +432,57 @@ local farDesk = { IsValid = function() return true end, GetPos = function() retu
 local p3 = MOCK.NewPlayer({ idx = 22, pos = Vector(0, 0, 0) })
 CW.OpenComputer(p3, farDesk)
 eq(#MOCK.netSent, 1, "ordinateur trop loin : aucun message")
+section("Serveur : radio et intrusion simulée")
+do
+    local function mkRadio()
+        local r = { CWKind = "radio", on = false, station = 0, IsValid = function() return true end,
+            GetPos = function() return Vector(40, 0, 0) end }
+        function r:SetOn(v) self.on = v end
+        function r:SetStation(v) self.station = v end
+        return r
+    end
+    local radio = mkRadio()
+    local pl = MOCK.NewPlayer({ idx = 31, pos = Vector(0, 0, 0) })
+    local function setRadio(plyObj, r, station, on)
+        tick()
+        net._in = { r, station, on }
+        net._recv["cw_radio_set"](0, plyObj)
+    end
+    check(net._recv["cw_radio_set"] and net._recv["cw_hack_done"], "récepteurs radio / hack enregistrés")
+    setRadio(pl, radio, 2, true)
+    eq(radio.station, 2, "station choisie"); eq(radio.on, true, "radio allumée")
+    setRadio(pl, radio, 3, false)
+    eq(radio.station, 3, "station mémorisée à l'arrêt"); eq(radio.on, false, "radio éteinte")
+    setRadio(pl, radio, 0, true);  eq(radio.station, 3, "station 0 refusée")
+    setRadio(pl, radio, 99, true); eq(radio.station, 3, "station hors liste refusée")
+    setRadio(MOCK.NewPlayer({ idx = 32, pos = Vector(5000, 0, 0) }), radio, 1, true); eq(radio.station, 3, "joueur trop loin refusé")
+    setRadio(pl, { CWKind = "pc", IsValid = function() return true end, GetPos = function() return Vector(0, 0, 0) end }, 1, true)
+    check(true, "entité qui n'est pas une radio ignorée")
+    -- anti-spam
+    tick()
+    net._in = { radio, 1, true }; net._recv["cw_radio_set"](0, pl)
+    net._in = { radio, 4, true }; net._recv["cw_radio_set"](0, pl)
+    eq(radio.station, 1, "anti-spam radio : 2e changement immédiat ignoré")
+    -- menu
+    MOCK.netSent = {}
+    tick(); CW.OpenRadioMenu(pl, radio)
+    eq(MOCK.netSent[1] and MOCK.netSent[1].name, "cw_radio_menu", "menu radio envoyé")
+    -- hook RP
+    local fired
+    hook.Add("ComputerWeb_HackSimulated", "t", function(ply2, ent2) fired = { ply2, ent2 } end)
+    tick(); net._in = { radio }; net._recv["cw_hack_done"](0, pl)
+    check(fired and fired[1] == pl and fired[2] == radio, "hook ComputerWeb_HackSimulated déclenché")
+    fired = nil
+    net._in = { radio }; net._recv["cw_hack_done"](0, pl)
+    check(fired == nil, "hack : anti-spam")
+    tick(); net._in = { { IsValid = function() return true end, GetPos = function() return Vector(0, 0, 0) end } }
+    net._recv["cw_hack_done"](0, pl)
+    check(fired == nil, "hack : objet qui n'est pas un appareil ComputerWeb ignoré")
+    tick(); net._in = { radio }; net._recv["cw_hack_done"](0, MOCK.NewPlayer({ idx = 33, pos = Vector(9000, 0, 0) }))
+    check(fired == nil, "hack : joueur hors de portée ignoré")
+    hook.Remove("ComputerWeb_HackSimulated", "t")
+end
+
 CurTime = realCurTime
 
 ---------------------------------------------------------------------------
@@ -568,13 +620,20 @@ for _, theme in ipairs(UI.ThemeOrder) do
 end
 
 section("Bureau : applications")
-local root = OS.Open({ CWTheme = "nova", IsValid = function() return false end })
-timer.Flush()
+local root
+local function desktopFor(theme)
+    if root and root:IsValid() and root.Theme.id == theme then return root end
+    root = OS.Open({ CWTheme = theme, IsValid = function() return false end })
+    timer.Flush()
+    return root
+end
 for _, id in ipairs(OS.AppOrder) do
     MOCK.lastError = nil
-    local win = root:OpenApp(id, {})
+    local def = OS.Apps[id]
+    local useRoot = desktopFor(def.themes and def.themes[1] or "nova")
+    local win = useRoot:OpenApp(id, {})
     check(win and win:IsValid(), id .. " : fenêtre ouverte")
-    check(root.Active == win, id .. " : fenêtre active")
+    check(useRoot.Active == win, id .. " : fenêtre active")
     noErrors(MOCK.exercise(win), id .. " : dessin / Think")
     local errs, n = MOCK.clickAll(win)
     noErrors(errs, id .. " : " .. n .. " clics simulés")
@@ -583,6 +642,21 @@ for _, id in ipairs(OS.AppOrder) do
     win:CloseWindow()
     check(not win:IsValid(), id .. " : fermeture")
 end
+
+section("Bureau : applications réservées à un thème")
+do
+    local nova = desktopFor("nova")
+    local before = #nova.Windows
+    check(nova:OpenApp("netlab", {}) == nil and #nova.Windows == before, "Réseau refusé sur Nova")
+    check(nova:OpenApp("matrix", {}) == nil, "Matrix refusé sur Nova")
+    local vis = OS.VisibleApps("nova")
+    local visC = OS.VisibleApps("cipher")
+    local function has(list, id) for _, v in ipairs(list) do if v == id then return true end end end
+    check(not has(vis, "netlab") and has(visC, "netlab"), "netlab visible seulement sous Cipher")
+    check(has(vis, "editor") and has(visC, "editor"), "apps communes visibles partout")
+    check(not OS.AppAllowed(nil, "nova"), "app inconnue non autorisée")
+end
+root = desktopFor("nova")
 
 section("Bureau : fenêtres (min / max / activation)")
 do
@@ -1047,6 +1121,186 @@ do
     noErrors(MOCK.exercise(mw), "démineur : dessin après clics (niveaux)")
     mw:CloseWindow()
     r:Shutdown()
+end
+
+section("Outil Réseau (Cipher) : appareils, ping, intrusion simulée")
+do
+    local Net = CW.Net
+    MOCK.me.pos = Vector(0, 0, 0)
+    local function dev(kind, idx, x, theme)
+        return { CWKind = kind, CWTheme = theme, IsValid = function() return true end,
+            EntIndex = function() return idx end, GetPos = function() return Vector(x, 0, 0) end }
+    end
+    local pc, scr, rad, far = dev("pc", 41, 300, "cipher"), dev("screen", 42, 100), dev("radio", 43, 900), dev("pc", 44, 9000, "nova")
+    MOCK.ents = { pc, scr, rad, far, { IsValid = function() return true end, EntIndex = function() return 45 end, GetPos = function() return Vector(1, 0, 0) end } }
+    local list = Net.Targets()
+    eq(#list, 3, "3 appareils à portée (le lointain et l'objet quelconque exclus)")
+    eq(list[1].ent, scr, "tri par distance"); eq(list[3].ent, rad, "plus loin en dernier")
+    check(list[1].ip:match("^192%.168%.%d+%.%d+$"), "IP fictive bien formée", list[1].ip)
+    eq(Net.IP(pc), Net.IP(pc), "IP stable")
+    eq(Net.Host(pc), "cipher-41", "nom d'hôte"); eq(Net.Host(scr), "screen-42", "nom d'hôte sans thème")
+    eq(Net.Resolve(Net.IP(pc), list).ent, pc, "résolution par IP")
+    eq(Net.Resolve("CIPHER-41", list).ent, pc, "résolution par nom (insensible à la casse)")
+    eq(Net.Resolve("#42", list).ent, scr, "résolution par numéro")
+    check(Net.Resolve("n-importe-quoi", list) == nil and Net.Resolve("", list) == nil, "résolution inconnue")
+    local pl = Net.PingLines(list[1], 4)
+    eq(#pl, 6, "ping : 1 entête + 4 paquets + 1 bilan")
+    check(pl[2][1]:find("temps=", 1, true), "ping : latence affichée")
+    check(Net.Latency(0) < Net.Latency(5000), "latence croissante avec la distance")
+    local script = Net.HackScript(list[2])
+    check(#script > 8, "script d'intrusion non vide")
+    check(script[#script][1] and script[#script][2]:find("jeu", 1, true), "le script rappelle que c'est un jeu")
+    local joined = {}
+    for _, l in ipairs(script) do joined[#joined + 1] = l[2] end
+    check(table.concat(joined, "\n"):find("simulation", 1, true), "le script se déclare simulation")
+    -- exécution
+    local out, finished = {}, false
+    Net.RunScript({ { 0, "a" }, { 0, "b", "ok" } }, function(t, k) out[#out + 1] = t end, nil, function() finished = true end)
+    for _ = 1, 10 do timer.Flush() end
+    eq(table.concat(out, ","), "a,b", "RunScript : ordre des lignes"); check(finished, "RunScript : callback de fin")
+    out, finished = {}, false
+    local alive = true
+    Net.RunScript({ { 0, "a" }, { 0, "b" } }, function(t) out[#out + 1] = t; alive = false end, function() return alive end, function() finished = true end)
+    for _ = 1, 10 do timer.Flush() end
+    eq(#out, 1, "RunScript : s'arrête si la fenêtre est fermée"); check(not finished, "RunScript : pas de fin après fermeture")
+    -- notification serveur
+    MOCK.netSent = {}
+    Net.Notify(list[1])
+    eq(MOCK.netSent[1] and MOCK.netSent[1].name, "cw_hack_done", "Notify : message envoyé au serveur")
+    -- application complète sous Cipher
+    local r = OS.Open({ CWTheme = "cipher", IsValid = function() return false end })
+    timer.Flush()
+    local w = r:OpenApp("netlab", {})
+    for _ = 1, 40 do timer.Flush() end
+    noErrors(MOCK.exercise(w), "Réseau : dessin après scan")
+    MOCK.netSent = {}
+    noErrors(MOCK.clickAll(w), "Réseau : clics (scan, ping, ports, intrusion)")
+    for _ = 1, 80 do timer.Flush() end
+    noErrors(MOCK.exercise(w), "Réseau : dessin après actions")
+    w:CloseWindow()
+    -- terminal
+    local tw = r:OpenApp("terminal", {})
+    local out2 = {}
+    local st = { desktop = r, cwd = "", started = SysTime(), out = function(txt) out2[#out2 + 1] = tostring(txt) end }
+    local function run(line) out2 = {}; CW.Term.Run(st, line) return table.concat(out2, "\n") end
+    check(run("scan"):find("screen%-42"), "terminal : scan liste les appareils")
+    check(run("ping screen-42"):find("temps=", 1, true), "terminal : ping d'un appareil de la scène")
+    check(run("ping exemple.fr"):find("simulation", 1, true), "terminal : ping générique conservé")
+    check(run("ports cipher-41"):find("22/tcp", 1, true), "terminal : ports")
+    check(run("ports inconnu"):find("usage"), "terminal : ports usage")
+    run("hack screen-42")
+    check(st.hacking, "terminal : intrusion en cours")
+    check(run("hack screen-42"):find("déjà en cours"), "terminal : une seule intrusion à la fois")
+    for _ = 1, 80 do timer.Flush() end
+    check(not st.hacking, "terminal : intrusion terminée")
+    check(run("hack inconnu"):find("usage"), "terminal : hack usage")
+    tw:CloseWindow()
+    r:Shutdown()
+    local rn = OS.Open({ CWTheme = "nova", IsValid = function() return false end })
+    timer.Flush()
+    st.desktop = rn
+    check(run("hack screen-42"):find("réservée"), "terminal : hack réservé à Cipher")
+    rn:Shutdown()
+    MOCK.ents = {}
+end
+
+section("Matrix : caractères d'ambiance")
+do
+    local Mx = CW.Matrix
+    eq(Mx.CharAt(3, 7, 2), Mx.CharAt(3, 7, 2), "caractère stable")
+    check(#Mx.CharAt(1, 1, 1) == 1 and Mx.Chars:find(Mx.CharAt(5, 9, 4), 1, true), "caractère valide")
+end
+
+section("Radio 3D : entité, audio, télécommande")
+do
+    CW.CVars.radiovol = CW.CVars.radiovol or CreateClientConVar("cw_radio_volume", "0.8")
+    local e = loadEnt("cw_radio", "client")
+    eq(e.CWKind, "radio", "type d'appareil"); check(e.Spawnable, "spawnable")
+    eq(e.IconOverride, "entities/cw_radio.png", "icône du menu de spawn")
+    check(e.CWModel:find("%.mdl$"), "modèle du jeu de base")
+    local inst = setmetatable({ _on = true, _st = 1, _pos = Vector(100, 0, 0) }, { __index = e })
+    function inst:GetOn() return self._on end
+    function inst:GetStation() return self._st end
+    function inst:GetPos() return self._pos end
+    function inst:IsValid() return not self.dead end
+    function inst:DrawModel() self.drawn = true end
+    MOCK.me.pos = Vector(0, 0, 0)
+    inst:Initialize()
+    MOCK.streams = 0
+    inst.NextCheck = 0; inst:Think()
+    eq(MOCK.streams, 1, "flux lancé quand la radio est allumée et proche")
+    eq(MOCK.lastStream, CW.Config.Radios[1].url, "URL de la station 1")
+    check(MOCK.lastStreamFlags:find("3d", 1, true) and MOCK.lastStreamFlags:find("mono", 1, true), "audio 3D mono")
+    check(IsValid(inst.Channel) and inst.Channel.fade and inst.Channel.fade[2] > inst.Channel.fade[1], "distances de fondu définies")
+    eq(inst.Channel.pos, inst._pos, "canal placé sur la radio")
+    inst._pos = Vector(120, 0, 0); inst.NextCheck = 0; inst:Think()
+    eq(inst.Channel.pos.x, 120, "canal suit la radio")
+    inst.NextCheck = 0; inst:Think()
+    eq(MOCK.streams, 1, "pas de relance inutile")
+    -- volume local
+    CW.CVars.radiovol.v = "0.25"; inst.NextCheck = 0; inst:Think()
+    eq(inst.Channel.vol, 0.25, "volume local appliqué")
+    -- changement de station
+    inst._st = 2; inst.NextCheck = 0; inst:Think()
+    eq(MOCK.streams, 2, "nouvelle station -> nouveau flux"); eq(MOCK.lastStream, CW.Config.Radios[2].url, "URL de la station 2")
+    local old = inst.Channel
+    inst._st = 3; inst.NextCheck = 0; inst:Think()
+    check(old.dead, "ancien canal arrêté")
+    -- station hors liste : coupe
+    inst._st = 99; inst.NextCheck = 0; inst:Think()
+    check(inst.Channel == nil, "station invalide : audio coupé")
+    inst._st = 1; inst.NextCheck = 0; inst:Think()
+    -- éteinte
+    inst._on = false; inst.NextCheck = 0; inst:Think()
+    check(inst.Channel == nil, "radio éteinte : audio coupé")
+    inst._on = true; inst.NextCheck = 0; inst:Think()
+    check(IsValid(inst.Channel), "rallumée : audio relancé")
+    -- loin
+    MOCK.me.pos = Vector(8000, 0, 0); inst.NextCheck = 0; inst:Think()
+    check(inst.Channel == nil, "trop loin : audio coupé")
+    MOCK.me.pos = Vector(0, 0, 0)
+    -- échec de chargement : pas de boucle de relance
+    MOCK.streamFails = true
+    MOCK.streams = 0
+    inst.NextCheck = 0; inst:Think()
+    MOCK.streamFails = false
+    eq(MOCK.streams, 1, "échec : une seule tentative")
+    local t0 = CurTime()
+    inst:Think()
+    eq(MOCK.streams, 1, "échec : pas de relance immédiate")
+    -- callback tardif d'une entité supprimée
+    inst.NextCheck = 0; inst.LoadedStation = nil
+    local pending
+    local realPlay = sound.PlayURL
+    sound.PlayURL = function(url, flags, cb) pending = cb end
+    inst.NextCheck = 0; inst:Think()
+    inst:OnRemove(); inst.dead = true
+    local stray = { IsValid = function() return true end, Stop = function(self) self.stopped = true end }
+    pending(stray, 0, "")
+    check(stray.stopped, "callback tardif : canal arrêté, pas de fuite")
+    sound.PlayURL = realPlay
+    -- HUD
+    inst.dead = false; inst:Initialize(); inst._on = true
+    local ok = pcall(function() hook.Run("HUDPaint") end)
+    check(ok, "HUD : pas d'erreur")
+    -- télécommande
+    local ent3 = { IsValid = function() return true end, GetPos = function() return Vector(50, 0, 0) end,
+        GetOn = function() return true end, GetStation = function() return 1 end }
+    net._in = { ent3 }
+    net._recv["cw_radio_menu"]()
+    local pnl
+    for p in pairs(MOCK.allPanels) do if not p.__parent and not p.__removed and p.__class == "DPanel" and p.Think and p.Paint and p.__w == nil == false then pnl = p end end
+    check(pnl ~= nil, "télécommande radio créée")
+    if pnl then
+        noErrors(MOCK.exercise(pnl), "télécommande radio : dessin")
+        MOCK.netSent = {}
+        noErrors(MOCK.clickAll(pnl), "télécommande radio : clics")
+        local sentSet
+        for _, m in ipairs(MOCK.netSent) do if m.name == "cw_radio_set" then sentSet = m end end
+        check(sentSet ~= nil, "bouton station / marche-arrêt -> cw_radio_set")
+        check(sentSet and sentSet.data[2] >= 1 and type(sentSet.data[3]) == "boolean", "paramètres du message valides")
+    end
+    inst:OnRemove()
 end
 
 ---------------------------------------------------------------------------

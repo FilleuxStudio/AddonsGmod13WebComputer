@@ -41,6 +41,24 @@ function OS.RegisterApp(id, def)
     end)
 end
 
+--- Une application peut être réservée à certains thèmes (def.themes = { "cipher" }).
+function OS.AppAllowed(def, themeId)
+    if not def or not def.themes then return def ~= nil end
+    for _, t in ipairs(def.themes) do
+        if t == themeId then return true end
+    end
+    return false
+end
+
+--- Identifiants des applications visibles dans un thème, dans l'ordre d'affichage.
+function OS.VisibleApps(themeId)
+    local out = {}
+    for _, id in ipairs(OS.AppOrder) do
+        if OS.AppAllowed(OS.Apps[id], themeId) then out[#out + 1] = id end
+    end
+    return out
+end
+
 local function wallpaperName(T)
     local wp = OS.CV.wallpaper:GetString()
     for _, name in ipairs(UI.Wallpapers) do
@@ -151,6 +169,11 @@ function OS.Open(ent)
         local def = OS.Apps[id]
         if not def then return end
         self:CloseStartMenu()
+
+        if not OS.AppAllowed(def, T.id) then
+            self:Toast(def.name .. " n'existe pas sur ce système.")
+            return
+        end
 
         if def.enabled and not def.enabled() then
             self:Toast(def.name .. " est désactivé par l'administrateur.")
@@ -383,7 +406,7 @@ function OS.Open(ent)
 
     -- Dock (thème "side") : une icône par application
     if T.layout == "side" then
-        for _, id in ipairs(OS.AppOrder) do
+        for _, id in ipairs(OS.VisibleApps(T.id)) do
             local def = OS.Apps[id]
             local b = vgui.Create("DButton", root.DockPanel)
             b:SetText("")
@@ -437,7 +460,7 @@ function OS.Open(ent)
 
         local items = {}
         if T.layout == "bottom" then
-            for _, id in ipairs(OS.AppOrder) do
+            for _, id in ipairs(OS.VisibleApps(T.id)) do
                 local def = OS.Apps[id]
                 if def.desktopIcon then
                     items[#items + 1] = { name = def.name, icon = def.icon, open = function() root:OpenApp(id) end }
@@ -531,7 +554,8 @@ function OS.Open(ent)
 
     local function buildMenu()
         if IsValid(menu) then menu:Remove() end
-        local count = #OS.AppOrder
+        local visible = OS.VisibleApps(T.id)
+        local count = #visible
         local menuH = S(64) + count * menuItemH + S(64)
         menu = vgui.Create("DPanel", screen)
         menu:SetSize(menuW, menuH)
@@ -596,7 +620,7 @@ function OS.Open(ent)
         end
 
         local y = S(68)
-        for _, id in ipairs(OS.AppOrder) do
+        for _, id in ipairs(visible) do
             local def = OS.Apps[id]
             menuButton(menu, def.name, def.icon, y, function() root:OpenApp(id) end)
             y = y + menuItemH

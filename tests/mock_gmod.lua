@@ -80,6 +80,8 @@ end
 local VecMT = {}
 VecMT.__index = VecMT
 function VecMT:Distance(o) return math.sqrt((self.x - o.x) ^ 2 + (self.y - o.y) ^ 2 + (self.z - o.z) ^ 2) end
+function VecMT.__add(a, b) return Vector(a.x + b.x, a.y + b.y, a.z + b.z) end
+function VecMT:ToScreen() return { x = 640 + self.x, y = 360 - self.z, visible = MOCK.vecVisible ~= false } end
 function Vector(x, y, z) return setmetatable({ x = x or 0, y = y or 0, z = z or 0 }, VecMT) end
 
 local PlayerMT = {}
@@ -180,6 +182,10 @@ function net.WriteEntity(e) table.insert(net._out.data, e) end
 function net.WriteString(s) table.insert(net._out.data, s) end
 function net.Send(ply) net._out.to = ply; MOCK.netSent[#MOCK.netSent + 1] = net._out; net._out = nil end
 function net.SendToServer() net._out.to = "server"; MOCK.netSent[#MOCK.netSent + 1] = net._out; net._out = nil end
+function net.WriteUInt(v) table.insert(net._out.data, v) end
+function net.WriteBool(v) table.insert(net._out.data, v) end
+function net.ReadUInt() return table.remove(net._in, 1) end
+function net.ReadBool() return table.remove(net._in, 1) end
 function net.ReadEntity() return table.remove(net._in, 1) end
 function net.ReadString() return table.remove(net._in, 1) end
 util = {
@@ -204,15 +210,21 @@ function MOCK.json_decode(s)
     return out
 end
 
+MOCK.ents = {}
+ents = { GetAll = function() return MOCK.ents end }
+
 sound = {}
 function sound.PlayURL(url, flags, cb)
-    MOCK.lastStream = url
+    MOCK.lastStream, MOCK.lastStreamFlags = url, flags
+    MOCK.streams = (MOCK.streams or 0) + 1
     local ch = { _state = GMOD_CHANNEL_PLAYING, vol = 1 }
     function ch:IsValid() return not self.dead end
     function ch:Play() self._state = GMOD_CHANNEL_PLAYING end
     function ch:Pause() self._state = GMOD_CHANNEL_PAUSED end
     function ch:Stop() self.dead = true; self._state = GMOD_CHANNEL_STOPPED end
     function ch:SetVolume(v) self.vol = v end
+    function ch:SetPos(p) self.pos = p end
+    function ch:Set3DFadeDistance(a, b) self.fade = { a, b } end
     function ch:GetState() return self._state end
     function ch:FFT(t) for i = 1, 64 do t[i] = 0.1 end return 64 end
     if MOCK.streamFails then cb(nil, 2, "Erreur simulée") else cb(ch, 0, "") end

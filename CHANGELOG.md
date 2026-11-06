@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.2.0 — Outils Cipher, radio 3D, nouvelle jaquette
+
+### Nouveautés
+- **Cipher** (classe `computerKali` conservée pour la compatibilité) : outils d'ambiance 100 % simulés — application **Réseau** (scan, ping, ports, intrusion simulée), application **Matrix**, commandes `scan`, `ping`, `ports`, `hack` du terminal. Ces outils agissent sur les ordinateurs, écrans et radios placés dans la scène ; aucun trafic réel n'est émis.
+- Hook serveur optionnel `ComputerWeb_HackSimulated(ply, ent)` pour brancher un scénario RP.
+- **Radio interactive** `cw_radio` (modèle HL2 `citizenradio`) : touche E → choix de la station, marche/arrêt, volume (`cw_radio_volume`) ; son 3D spatialisé, état synchronisé pour tous.
+- Applications réservées à un thème (`themes = {...}` dans `OS.RegisterApp`).
+- Nouvelle jaquette semi-réaliste (anglais et français) ; anciennes images conservées dans `docs/`.
+- README en français (`README.fr.md`) et en anglais (`README.md`).
+
+### Sécurité
+- Messages radio/hack revalidés côté serveur (entité, distance, cadence, plages de valeurs).
+
+### Tests
+- 651+ vérifications automatiques.
+
 ## 2.1.0 — Retro98, micro-applications, personnalisation
 
 ### Nouveautés
