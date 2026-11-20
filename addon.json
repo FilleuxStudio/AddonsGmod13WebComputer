@@ -2,12 +2,12 @@
 	"title": "ComputerWeb - Ordinateurs jouables",
 	"type": "tool",
 	"tags": [
-		"fun",
 		"roleplay",
 		"realism"
 	],
 	"ignore": [
 		"*.psd",
+		"*.sw.vtx",
 		"*.vcproj",
 		"*.svn*",
 		"*.git*",
